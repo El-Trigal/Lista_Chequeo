@@ -12,6 +12,13 @@ import { loadRecords, saveRecord, updateRecord } from "./lib/records";
 import { hasSupabaseConfig } from "./lib/supabase";
 import { sanitizeDecimalInput } from "./lib/inputFormat";
 import {
+  authenticateUser,
+  clearSessionUser,
+  getPermissions,
+  loadSessionUser,
+  saveSessionUser
+} from "./lib/auth";
+import {
   downloadSprayRecordsExcel,
   getCurrentWeekCode,
   getSprayRecordWeekCode,
@@ -145,12 +152,13 @@ function SectionHeader({ number, title, expanded, onToggle, rightSlot }) {
   );
 }
 
-function StatusToggle({ value, onChange }) {
+function StatusToggle({ value, onChange, disabled = false }) {
   return (
     <div className="status-toggle" role="group" aria-label="Cumplimiento">
       <button
         type="button"
         className={value === "yes" ? "selected yes" : ""}
+        disabled={disabled}
         onClick={() => onChange("yes")}
       >
         Sí
@@ -158,6 +166,7 @@ function StatusToggle({ value, onChange }) {
       <button
         type="button"
         className={value === "no" ? "selected no" : ""}
+        disabled={disabled}
         onClick={() => onChange("no")}
       >
         No
@@ -172,7 +181,8 @@ function MetadataSection({
   expanded,
   onToggle,
   onMetadataChange,
-  onProductChange
+  onProductChange,
+  readOnly = false
 }) {
   const isSectionComplete = [...highlightedMetadataFields].every((fieldId) =>
     String(metadata[fieldId] ?? "").trim()
@@ -200,6 +210,7 @@ function MetadataSection({
                   type="text"
                   inputMode={field.type === "decimal" ? "decimal" : undefined}
                   value={metadata[field.id] ?? ""}
+                  disabled={readOnly}
                   onChange={(event) =>
                     onMetadataChange(
                       field.id,
@@ -223,6 +234,7 @@ function MetadataSection({
                   <input
                     type="text"
                     value={product}
+                    disabled={readOnly}
                     onChange={(event) => onProductChange(index, event.target.value)}
                   />
                 </label>
@@ -243,7 +255,8 @@ function ChecklistSection({
   sprayerCount,
   onSprayerCountChange,
   onToggle,
-  onAnswerChange
+  onAnswerChange,
+  readOnly = false
 }) {
   const showValueColumn = sectionsWithValueColumn.has(section.id);
   const matrixResult = section.matrix
@@ -290,6 +303,7 @@ function ChecklistSection({
                 <span>Número de aspersores</span>
                 <select
                   value={sprayerCount}
+                  disabled={readOnly}
                   onChange={(event) => onSprayerCountChange(Number(event.target.value))}
                 >
                   {Array.from({ length: section.matrix.maxSprayerCount }, (_, itemIndex) => itemIndex + 1).map(
@@ -345,6 +359,7 @@ function ChecklistSection({
                             inputMode="decimal"
                             value={answer.value ?? ""}
                             placeholder="Valor medido"
+                            disabled={readOnly}
                             onChange={(event) =>
                               onAnswerChange(answerId, {
                                 value: sanitizeDecimalInput(event.target.value)
@@ -353,6 +368,7 @@ function ChecklistSection({
                           />
                           <StatusToggle
                             value={answer.status}
+                            disabled={readOnly}
                             onChange={(status) => onAnswerChange(answerId, { status })}
                           />
                         </div>
@@ -388,6 +404,7 @@ function ChecklistSection({
                           inputMode="decimal"
                           value={answer.value ?? ""}
                           placeholder={item.valueLabel ?? "-"}
+                          disabled={readOnly}
                           onChange={(event) =>
                             onAnswerChange(item.id, {
                               value: sanitizeDecimalInput(event.target.value)
@@ -398,6 +415,7 @@ function ChecklistSection({
                     ) : null}
                     <StatusToggle
                       value={answer.status}
+                      disabled={readOnly}
                       onChange={(status) => onAnswerChange(item.id, { status })}
                     />
                   </div>
@@ -411,7 +429,7 @@ function ChecklistSection({
   );
 }
 
-function ObservationsSection({ value, expanded, onToggle, onChange }) {
+function ObservationsSection({ value, expanded, onToggle, onChange, readOnly = false }) {
   return (
     <section className="section-band">
       <SectionHeader
@@ -424,7 +442,12 @@ function ObservationsSection({ value, expanded, onToggle, onChange }) {
         <div className="collapsible-content">
           <label className="form-field">
             <span>Situación a mejorar</span>
-            <textarea value={value} onChange={(event) => onChange(event.target.value)} rows="5" />
+            <textarea
+              value={value}
+              readOnly={readOnly}
+              onChange={(event) => onChange(event.target.value)}
+              rows="5"
+            />
           </label>
         </div>
       ) : null}
@@ -432,7 +455,7 @@ function ObservationsSection({ value, expanded, onToggle, onChange }) {
   );
 }
 
-function SummaryPanel({ result, observations, onSave, saveState }) {
+function SummaryPanel({ result, observations, onSave, saveState, canSave = true }) {
   const observedRows = [...result.compliant, ...result.nonCompliant].filter((row) =>
     row.observation.trim()
   );
@@ -498,9 +521,11 @@ function SummaryPanel({ result, observations, onSave, saveState }) {
       </div>
 
       <div className="summary-actions">
-        <button type="button" className="primary-action" onClick={onSave}>
-          Guardar registro
-        </button>
+        {canSave ? (
+          <button type="button" className="primary-action" onClick={onSave}>
+            Guardar registro
+          </button>
+        ) : null}
         {saveState ? <span className={saveState.type}>{saveState.message}</span> : null}
       </div>
     </section>
@@ -581,7 +606,7 @@ function RecordsLoadingState() {
   );
 }
 
-function RecordsView({ records, recordsSource, isLoading, onEditRecord }) {
+function RecordsView({ records, recordsSource, isLoading, permissions, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
   const [filters, setFilters] = useState({
     week: "",
@@ -654,9 +679,11 @@ function RecordsView({ records, recordsSource, isLoading, onEditRecord }) {
               />
             </label>
           </div>
-          <button type="button" className="secondary-action" onClick={handleDownloadExcel}>
-            Descargar Excel
-          </button>
+          {permissions.canDownloadExcel ? (
+            <button type="button" className="secondary-action" onClick={handleDownloadExcel}>
+              Descargar Excel
+            </button>
+          ) : null}
           <span className="source-pill">{recordsSource}</span>
         </div>
       </div>
@@ -718,7 +745,7 @@ function RecordsView({ records, recordsSource, isLoading, onEditRecord }) {
                         onEditRecord(record);
                       }}
                     >
-                      Editar
+                      {permissions.canEditRecords ? "Editar" : "Ver"}
                     </button>
                   </span>
                 </div>
@@ -734,14 +761,67 @@ function RecordsView({ records, recordsSource, isLoading, onEditRecord }) {
   );
 }
 
-function HomeScreen({ onOpenSprayChecklist, onOpenRbMonitoring }) {
+function LoginScreen({ onLogin }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    const user = authenticateUser(username, password);
+
+    if (!user) {
+      setError("Usuario o contraseña incorrectos.");
+      return;
+    }
+
+    saveSessionUser(user);
+    onLogin(user);
+  }
+
+  return (
+    <main className="home-shell">
+      <section className="login-panel">
+        <div>
+          <p className="eyebrow">Flores El Trigal</p>
+          <h1>Listas de chequeo</h1>
+        </div>
+        <form className="login-form" onSubmit={handleSubmit}>
+          <label className="form-field">
+            <span>Usuario</span>
+            <input value={username} onChange={(event) => setUsername(event.target.value)} />
+          </label>
+          <label className="form-field">
+            <span>Contraseña</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          <button type="submit" className="primary-action">
+            Iniciar sesión
+          </button>
+          {error ? <span className="error-message">{error}</span> : null}
+        </form>
+      </section>
+    </main>
+  );
+}
+
+function HomeScreen({ currentUser, onLogout, onOpenSprayChecklist, onOpenRbMonitoring }) {
   return (
     <main className="home-shell">
       <section className="home-panel">
         <div>
           <p className="eyebrow">Flores El Trigal</p>
           <h1>Listas de chequeo</h1>
+          <p className="session-text">Sesión: {currentUser.label}</p>
         </div>
+        <button type="button" className="ghost-action logout-action" onClick={onLogout}>
+          Cerrar sesión
+        </button>
 
         <div className="checklist-options">
           <button type="button" className="checklist-option" onClick={onOpenSprayChecklist}>
@@ -758,7 +838,7 @@ function HomeScreen({ onOpenSprayChecklist, onOpenRbMonitoring }) {
   );
 }
 
-function ChecklistStartScreen({ saveState, onCreate }) {
+function ChecklistStartScreen({ saveState, permissions, onCreate }) {
   return (
     <section className="checklist-start">
       <div>
@@ -767,9 +847,13 @@ function ChecklistStartScreen({ saveState, onCreate }) {
         <p>Inicia un nuevo registro para desplegar las secciones del chequeo.</p>
       </div>
 
-      <button type="button" className="primary-action create-checklist-button" onClick={onCreate}>
-        Crear Chequeo
-      </button>
+      {permissions.canCreateChecklists ? (
+        <button type="button" className="primary-action create-checklist-button" onClick={onCreate}>
+          Crear Chequeo
+        </button>
+      ) : (
+        <p className="permission-note">Tu usuario puede ver registros, pero no crear chequeos.</p>
+      )}
 
       {saveState ? <span className={saveState.type}>{saveState.message}</span> : null}
     </section>
@@ -777,6 +861,8 @@ function ChecklistStartScreen({ saveState, onCreate }) {
 }
 
 function App() {
+  const [currentUser, setCurrentUser] = useState(loadSessionUser);
+  const permissions = getPermissions(currentUser);
   const [activeModule, setActiveModule] = useState(null);
   const [view, setView] = useState(CHECKLIST_VIEW);
   const [isChecklistActive, setIsChecklistActive] = useState(false);
@@ -938,6 +1024,13 @@ function App() {
   }
 
   function cancelEditRecord() {
+    if (!permissions.canEditRecords) {
+      clearChecklistData();
+      setIsChecklistActive(false);
+      setView(RECORDS_VIEW);
+      return;
+    }
+
     const shouldLeave = window.confirm(
       "¿Seguro que quieres dejar de editar este chequeo? No se guardará ningún cambio que hayas hecho."
     );
@@ -977,6 +1070,9 @@ function App() {
   }
 
   async function handleSaveRecord() {
+    if (!permissions.canEditRecords) {
+      return;
+    }
     const savedAt = new Date();
     const savedAtIso = savedAt.toISOString();
     const weekCode = getCurrentWeekCode();
@@ -1024,16 +1120,37 @@ function App() {
     setView(CHECKLIST_VIEW);
   }
 
+  function handleLogout() {
+    clearSessionUser();
+    setCurrentUser(null);
+    setActiveModule(null);
+    setIsChecklistActive(false);
+    clearChecklistData();
+  }
+
+  if (!currentUser) {
+    return <LoginScreen onLogin={setCurrentUser} />;
+  }
+
   if (activeModule !== SPRAY_CHECKLIST_MODULE) {
     if (activeModule === RB_MONITORING_MODULE) {
-      return <RbMonitoringApp onHome={() => setActiveModule(null)} />;
+      return (
+        <RbMonitoringApp
+          currentUser={currentUser}
+          permissions={permissions}
+          onHome={() => setActiveModule(null)}
+          onLogout={handleLogout}
+        />
+      );
     }
 
     return (
       <HomeScreen
+        currentUser={currentUser}
+        onLogout={handleLogout}
         onOpenSprayChecklist={() => {
           setActiveModule(SPRAY_CHECKLIST_MODULE);
-          setView(CHECKLIST_VIEW);
+          setView(permissions.canCreateChecklists ? CHECKLIST_VIEW : RECORDS_VIEW);
           setIsChecklistActive(false);
         }}
         onOpenRbMonitoring={() => {
@@ -1052,6 +1169,7 @@ function App() {
         </div>
         <div className="header-actions">
           <span className="source-pill">{hasSupabaseConfig ? "Supabase activo" : "MVP local"}</span>
+          <span className="source-pill">{currentUser.label}</span>
           <button type="button" className="ghost-action" onClick={returnHome}>
             Inicio
           </button>
@@ -1096,7 +1214,7 @@ function App() {
               <div className="edit-mode-panel">
                 <div>
                   <span>Modo</span>
-                  <strong>Edición</strong>
+                  <strong>{permissions.canEditRecords ? "Edición" : "Visualización"}</strong>
                 </div>
                 <button type="button" className="danger-action" onClick={cancelEditRecord}>
                   Salir
@@ -1112,6 +1230,7 @@ function App() {
             onToggle={() => toggleSection(metadataSection.id)}
             onMetadataChange={handleMetadataChange}
             onProductChange={handleProductChange}
+            readOnly={!permissions.canEditRecords}
           />
 
           {scoredSections.map((section, index) => (
@@ -1125,6 +1244,7 @@ function App() {
               onSprayerCountChange={(count) => handleSprayerCountChange(section.id, count)}
               onToggle={() => toggleSection(section.id)}
               onAnswerChange={handleAnswerChange}
+              readOnly={!permissions.canEditRecords}
             />
           ))}
 
@@ -1133,6 +1253,7 @@ function App() {
             expanded={expandedSections[observationSection.id]}
             onToggle={() => toggleSection(observationSection.id)}
             onChange={setObservations}
+            readOnly={!permissions.canEditRecords}
           />
 
           <SummaryPanel
@@ -1140,16 +1261,18 @@ function App() {
             observations={observations}
             onSave={handleSaveRecord}
             saveState={saveState}
+            canSave={permissions.canEditRecords}
           />
           </>
         ) : (
-          <ChecklistStartScreen saveState={saveState} onCreate={startChecklist} />
+          <ChecklistStartScreen saveState={saveState} permissions={permissions} onCreate={startChecklist} />
         )
       ) : (
         <RecordsView
           records={records}
           recordsSource={recordsSource}
           isLoading={isRecordsLoading}
+          permissions={permissions}
           onEditRecord={editRecord}
         />
       )}

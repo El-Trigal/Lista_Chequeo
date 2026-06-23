@@ -70,12 +70,13 @@ function createExpandedSections(expanded = true) {
   };
 }
 
-function StatusToggle({ value, onChange }) {
+function StatusToggle({ value, onChange, disabled = false }) {
   return (
     <div className="status-toggle" role="group" aria-label="Cumplimiento">
       <button
         type="button"
         className={value === "yes" ? "selected yes" : ""}
+        disabled={disabled}
         onClick={() => onChange("yes")}
       >
         Sí
@@ -83,6 +84,7 @@ function StatusToggle({ value, onChange }) {
       <button
         type="button"
         className={value === "no" ? "selected no" : ""}
+        disabled={disabled}
         onClick={() => onChange("no")}
       >
         No
@@ -199,7 +201,7 @@ function calculateMonitoringScore(form) {
   };
 }
 
-function RbMonitoringStartScreen({ saveState, onCreate }) {
+function RbMonitoringStartScreen({ saveState, permissions, onCreate }) {
   return (
     <section className="checklist-start">
       <div>
@@ -208,9 +210,13 @@ function RbMonitoringStartScreen({ saveState, onCreate }) {
         <p>Inicia un nuevo registro para desplegar las 3 secciones del chequeo.</p>
       </div>
 
-      <button type="button" className="primary-action create-checklist-button" onClick={onCreate}>
-        Crear Chequeo
-      </button>
+      {permissions.canCreateChecklists ? (
+        <button type="button" className="primary-action create-checklist-button" onClick={onCreate}>
+          Crear Chequeo
+        </button>
+      ) : (
+        <p className="permission-note">Tu usuario puede ver registros, pero no crear chequeos.</p>
+      )}
 
       {saveState ? <span className={saveState.type}>{saveState.message}</span> : null}
     </section>
@@ -226,7 +232,7 @@ function RecordsLoadingState() {
   );
 }
 
-function RbMonitoringRecords({ records, recordsSource, isLoading, onEditRecord }) {
+function RbMonitoringRecords({ records, recordsSource, isLoading, permissions, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
   const [filters, setFilters] = useState({
     week: "",
@@ -295,9 +301,11 @@ function RbMonitoringRecords({ records, recordsSource, isLoading, onEditRecord }
               />
             </label>
           </div>
-          <button type="button" className="secondary-action" onClick={handleDownloadExcel}>
-            Descargar Excel
-          </button>
+          {permissions.canDownloadExcel ? (
+            <button type="button" className="secondary-action" onClick={handleDownloadExcel}>
+              Descargar Excel
+            </button>
+          ) : null}
           <span className="source-pill">{recordsSource}</span>
         </div>
       </div>
@@ -354,7 +362,7 @@ function RbMonitoringRecords({ records, recordsSource, isLoading, onEditRecord }
                       onEditRecord(record);
                     }}
                   >
-                    Editar
+                    {permissions.canEditRecords ? "Editar" : "Ver"}
                   </button>
                 </span>
               </div>
@@ -415,7 +423,7 @@ function RbMonitoringRecords({ records, recordsSource, isLoading, onEditRecord }
   );
 }
 
-function RendimientoSection({ form, expanded, onToggle, onChange, score }) {
+function RendimientoSection({ form, expanded, onToggle, onChange, score, readOnly = false }) {
   const isComplete =
     form.monitorName.trim() &&
     form.assurerName.trim() &&
@@ -445,6 +453,7 @@ function RendimientoSection({ form, expanded, onToggle, onChange, score }) {
               <input
                 type="text"
                 value={form.monitorName}
+                disabled={readOnly}
                 onChange={(event) => onChange({ monitorName: event.target.value })}
               />
             </label>
@@ -453,6 +462,7 @@ function RendimientoSection({ form, expanded, onToggle, onChange, score }) {
               <input
                 type="text"
                 value={form.assurerName}
+                disabled={readOnly}
                 onChange={(event) => onChange({ assurerName: event.target.value })}
               />
             </label>
@@ -462,6 +472,7 @@ function RendimientoSection({ form, expanded, onToggle, onChange, score }) {
                 type="text"
                 inputMode="decimal"
                 value={form.assignedBeds}
+                disabled={readOnly}
                 onChange={(event) =>
                   onChange({ assignedBeds: sanitizeDecimalInput(event.target.value) })
                 }
@@ -471,6 +482,7 @@ function RendimientoSection({ form, expanded, onToggle, onChange, score }) {
               <span>Edad</span>
               <select
                 value={form.cropAge}
+                disabled={readOnly}
                 onChange={(event) => onChange({ cropAge: event.target.value })}
               >
                 {RB_MONITORING_AGE_TIMES.map((age) => (
@@ -485,6 +497,7 @@ function RendimientoSection({ form, expanded, onToggle, onChange, score }) {
             <span>Cumple con los tiempos establecidos</span>
             <StatusToggle
               value={form.rendimientoStatus}
+              disabled={readOnly}
               onChange={(status) => onChange({ rendimientoStatus: status })}
             />
           </div>
@@ -494,7 +507,7 @@ function RendimientoSection({ form, expanded, onToggle, onChange, score }) {
   );
 }
 
-function SimulacrosSection({ form, expanded, onToggle, onChange, result }) {
+function SimulacrosSection({ form, expanded, onToggle, onChange, result, readOnly = false }) {
   const isComplete =
     form.bedMarking &&
     form.sites.every(
@@ -544,6 +557,7 @@ function SimulacrosSection({ form, expanded, onToggle, onChange, result }) {
                   <input
                     type="text"
                     value={site.block}
+                    disabled={readOnly}
                     onChange={(event) => updateSite(index, { block: event.target.value })}
                   />
                 </div>
@@ -551,6 +565,7 @@ function SimulacrosSection({ form, expanded, onToggle, onChange, result }) {
                   <input
                     type="text"
                     value={site.bed}
+                    disabled={readOnly}
                     onChange={(event) => updateSite(index, { bed: event.target.value })}
                   />
                 </div>
@@ -559,6 +574,7 @@ function SimulacrosSection({ form, expanded, onToggle, onChange, result }) {
                     type="text"
                     inputMode="decimal"
                     value={site.disposed}
+                    disabled={readOnly}
                     onChange={(event) =>
                       updateSite(index, { disposed: sanitizeDecimalInput(event.target.value) })
                     }
@@ -569,6 +585,7 @@ function SimulacrosSection({ form, expanded, onToggle, onChange, result }) {
                     type="text"
                     inputMode="decimal"
                     value={site.found}
+                    disabled={readOnly}
                     onChange={(event) =>
                       updateSite(index, { found: sanitizeDecimalInput(event.target.value) })
                     }
@@ -594,6 +611,7 @@ function SimulacrosSection({ form, expanded, onToggle, onChange, result }) {
             <span>Marcación de cama</span>
             <StatusToggle
               value={form.bedMarking}
+              disabled={readOnly}
               onChange={(status) => onChange({ bedMarking: status })}
             />
           </div>
@@ -603,7 +621,7 @@ function SimulacrosSection({ form, expanded, onToggle, onChange, result }) {
   );
 }
 
-function ControlQualitySection({ form, expanded, onToggle, onChange, score }) {
+function ControlQualitySection({ form, expanded, onToggle, onChange, score, readOnly = false }) {
   const isComplete = RB_MONITORING_ITEMS.every((item) => form.controlAnswers[item.id]);
 
   return (
@@ -636,6 +654,7 @@ function ControlQualitySection({ form, expanded, onToggle, onChange, score }) {
                 <div className="item-weight">{formatNumber(item.weight)}</div>
                 <StatusToggle
                   value={form.controlAnswers[item.id]}
+                  disabled={readOnly}
                   onChange={(status) =>
                     onChange({
                       controlAnswers: {
@@ -655,6 +674,7 @@ function ControlQualitySection({ form, expanded, onToggle, onChange, score }) {
               <textarea
                 rows="4"
                 value={form.commitments}
+                readOnly={readOnly}
                 onChange={(event) => onChange({ commitments: event.target.value })}
               />
             </label>
@@ -665,8 +685,10 @@ function ControlQualitySection({ form, expanded, onToggle, onChange, score }) {
   );
 }
 
-export default function RbMonitoringApp({ onHome }) {
-  const [view, setView] = useState(CHECKLIST_VIEW);
+export default function RbMonitoringApp({ currentUser, permissions, onHome, onLogout }) {
+  const [view, setView] = useState(
+    permissions.canCreateChecklists ? CHECKLIST_VIEW : RECORDS_VIEW
+  );
   const [isChecklistActive, setIsChecklistActive] = useState(false);
   const [form, setForm] = useState(createInitialForm);
   const [expandedSections, setExpandedSections] = useState(() => createExpandedSections(true));
@@ -772,6 +794,13 @@ export default function RbMonitoringApp({ onHome }) {
   }
 
   function cancelEditRecord() {
+    if (!permissions.canEditRecords) {
+      clearChecklistData();
+      setIsChecklistActive(false);
+      setView(RECORDS_VIEW);
+      return;
+    }
+
     const shouldLeave = window.confirm(
       "¿Seguro que quieres dejar de editar este chequeo? No se guardará ningún cambio que hayas hecho."
     );
@@ -811,6 +840,10 @@ export default function RbMonitoringApp({ onHome }) {
   }
 
   async function handleSaveRecord() {
+    if (!permissions.canEditRecords) {
+      return;
+    }
+
     const savedAt = new Date();
     const weekCode = getCurrentWeekCode();
     const record = {
@@ -856,6 +889,10 @@ export default function RbMonitoringApp({ onHome }) {
         </div>
         <div className="header-actions">
           <span className="source-pill">{hasSupabaseConfig ? "Supabase activo" : "MVP local"}</span>
+          <span className="source-pill">{currentUser.label}</span>
+          <button type="button" className="ghost-action" onClick={onLogout}>
+            Cerrar sesión
+          </button>
           <button type="button" className="ghost-action" onClick={returnHome}>
             Inicio
           </button>
@@ -900,7 +937,7 @@ export default function RbMonitoringApp({ onHome }) {
                 <div className="edit-mode-panel">
                   <div>
                     <span>Modo</span>
-                    <strong>Edición</strong>
+                    <strong>{permissions.canEditRecords ? "Edición" : "Visualización"}</strong>
                   </div>
                   <button type="button" className="danger-action" onClick={cancelEditRecord}>
                     Salir
@@ -915,6 +952,7 @@ export default function RbMonitoringApp({ onHome }) {
               onToggle={() => toggleSection("rendimiento")}
               onChange={updateForm}
               score={result.rendimientoScore}
+              readOnly={!permissions.canEditRecords}
             />
             <SimulacrosSection
               form={form}
@@ -922,6 +960,7 @@ export default function RbMonitoringApp({ onHome }) {
               onToggle={() => toggleSection("simulacros")}
               onChange={updateForm}
               result={result}
+              readOnly={!permissions.canEditRecords}
             />
             <ControlQualitySection
               form={form}
@@ -929,6 +968,7 @@ export default function RbMonitoringApp({ onHome }) {
               onToggle={() => toggleSection("control")}
               onChange={updateForm}
               score={result.controlScore}
+              readOnly={!permissions.canEditRecords}
             />
 
             <section className="summary-panel">
@@ -984,20 +1024,27 @@ export default function RbMonitoringApp({ onHome }) {
               </div>
 
               <div className="summary-actions">
-                <button type="button" className="primary-action" onClick={handleSaveRecord}>
-                  Guardar registro
-                </button>
+                {permissions.canEditRecords ? (
+                  <button type="button" className="primary-action" onClick={handleSaveRecord}>
+                    Guardar registro
+                  </button>
+                ) : null}
               </div>
             </section>
           </>
         ) : (
-          <RbMonitoringStartScreen saveState={saveState} onCreate={startChecklist} />
+          <RbMonitoringStartScreen
+            saveState={saveState}
+            permissions={permissions}
+            onCreate={startChecklist}
+          />
         )
       ) : (
         <RbMonitoringRecords
           records={records}
           recordsSource={recordsSource}
           isLoading={isRecordsLoading}
+          permissions={permissions}
           onEditRecord={editRecord}
         />
       )}
