@@ -749,6 +749,20 @@ textarea:focus {
   font-weight: 850;
 }
 
+.sync-status-pill {
+  display: block;
+  margin-bottom: 6px;
+  border: 1px solid #d6ad49;
+  border-radius: 999px;
+  background: #fff8e8;
+  color: #76520e;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1.6;
+  text-align: center;
+}
+
 .edit-record-button:hover {
   background: #f5e7c4;
 }

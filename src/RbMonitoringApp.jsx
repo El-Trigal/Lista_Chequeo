@@ -331,6 +331,9 @@ function RbMonitoringRecords({ records, recordsSource, onEditRecord }) {
                 </span>
                 <span>{formatNumber(record.percent)}%</span>
                 <span>
+                  {record.syncStatus === "pending" ? (
+                    <em className="sync-status-pill">Pendiente</em>
+                  ) : null}
                   <button
                     type="button"
                     className="edit-record-button"
@@ -685,6 +688,19 @@ export default function RbMonitoringApp({ onHome }) {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
+
+  useEffect(() => {
+    if (view === RECORDS_VIEW) {
+      refreshRecords();
+      const intervalId = window.setInterval(refreshRecords, 15000);
+
+      return () => {
+        window.clearInterval(intervalId);
+      };
+    }
+
+    return undefined;
+  }, [view]);
 
   function updateForm(patch) {
     setForm((current) => ({

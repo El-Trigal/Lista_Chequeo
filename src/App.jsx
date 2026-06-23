@@ -681,6 +681,9 @@ function RecordsView({ records, recordsSource, onEditRecord }) {
                   </span>
                   <span>{formatNumber(calification.percent)}%</span>
                   <span>
+                    {record.syncStatus === "pending" ? (
+                      <em className="sync-status-pill">Pendiente</em>
+                    ) : null}
                     <button
                       type="button"
                       className="edit-record-button"
@@ -796,6 +799,19 @@ function App() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
+
+  useEffect(() => {
+    if (view === RECORDS_VIEW) {
+      refreshRecords();
+      const intervalId = window.setInterval(refreshRecords, 15000);
+
+      return () => {
+        window.clearInterval(intervalId);
+      };
+    }
+
+    return undefined;
+  }, [view]);
 
   function handleMetadataChange(fieldId, value) {
     setMetadata((current) => ({
