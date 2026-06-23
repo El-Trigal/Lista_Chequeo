@@ -777,6 +777,24 @@ function App() {
 
   useEffect(() => {
     refreshRecords();
+
+    function handleConnectivityChange() {
+      refreshRecords();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        refreshRecords();
+      }
+    }
+
+    window.addEventListener("online", handleConnectivityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("online", handleConnectivityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   function handleMetadataChange(fieldId, value) {
@@ -899,6 +917,16 @@ function App() {
     clearChecklistData();
   }
 
+  function getLocalSourceLabel(nextRecords) {
+    const pendingCount = nextRecords.filter((record) => record.syncStatus === "pending").length;
+
+    if (!pendingCount) {
+      return hasSupabaseConfig ? "Supabase" : "Local";
+    }
+
+    return `Supabase (${pendingCount} pendiente${pendingCount === 1 ? "" : "s"})`;
+  }
+
   async function handleSaveRecord() {
     const savedAt = new Date();
     const savedAtIso = savedAt.toISOString();
@@ -929,25 +957,22 @@ function App() {
       }
     };
 
-    try {
-      const nextRecords = editingRecord
-        ? await updateRecord(record)
-        : await saveRecord(record);
-      setRecords(nextRecords);
-      setSaveState({
-        type: "success-message",
-        message: editingRecord ? "Registro actualizado." : "Registro guardado."
-      });
-      clearChecklistData(false);
-      setIsChecklistActive(false);
-      setView(CHECKLIST_VIEW);
-    } catch (error) {
-      setSaveState({
-        type: "error-message",
-        message: `Guardado local realizado, pero Supabase respondió: ${error.message}`
-      });
-      await refreshRecords();
-    }
+    const nextRecords = editingRecord
+      ? await updateRecord(record)
+      : await saveRecord(record);
+    const isPending = nextRecords.some((item) => item.id === record.id && item.syncStatus === "pending");
+
+    setRecords(nextRecords);
+    setRecordsSource(getLocalSourceLabel(nextRecords));
+    setSaveState({
+      type: "success-message",
+      message: isPending
+        ? "Registro guardado local. Se sincronizará con Supabase cuando haya conexión."
+        : editingRecord ? "Registro actualizado y sincronizado." : "Registro guardado y sincronizado."
+    });
+    clearChecklistData(false);
+    setIsChecklistActive(false);
+    setView(CHECKLIST_VIEW);
   }
 
   if (activeModule !== SPRAY_CHECKLIST_MODULE) {

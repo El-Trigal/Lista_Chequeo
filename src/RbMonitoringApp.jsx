@@ -19,6 +19,7 @@ import {
   getRbRecordWeekCode,
   matchesExportFilters
 } from "./lib/excelExport";
+import { hasSupabaseConfig } from "./lib/supabase";
 
 const CHECKLIST_VIEW = "checklist";
 const RECORDS_VIEW = "records";
@@ -665,6 +666,24 @@ export default function RbMonitoringApp({ onHome }) {
 
   useEffect(() => {
     refreshRecords();
+
+    function handleConnectivityChange() {
+      refreshRecords();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        refreshRecords();
+      }
+    }
+
+    window.addEventListener("online", handleConnectivityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("online", handleConnectivityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   function updateForm(patch) {
@@ -737,6 +756,16 @@ export default function RbMonitoringApp({ onHome }) {
     onHome();
   }
 
+  function getLocalSourceLabel(nextRecords) {
+    const pendingCount = nextRecords.filter((record) => record.syncStatus === "pending").length;
+
+    if (!pendingCount) {
+      return hasSupabaseConfig ? "Supabase" : "Local";
+    }
+
+    return `Supabase (${pendingCount} pendiente${pendingCount === 1 ? "" : "s"})`;
+  }
+
   async function handleSaveRecord() {
     const savedAt = new Date();
     const weekCode = getCurrentWeekCode();
@@ -759,11 +788,15 @@ export default function RbMonitoringApp({ onHome }) {
     const nextRecords = editingRecord
       ? await updateRbMonitoringRecord(record)
       : await saveRbMonitoringRecord(record);
+    const isPending = nextRecords.some((item) => item.id === record.id && item.syncStatus === "pending");
 
     setRecords(nextRecords);
+    setRecordsSource(getLocalSourceLabel(nextRecords));
     setSaveState({
       type: "success-message",
-      message: editingRecord ? "Registro actualizado." : "Registro guardado."
+      message: isPending
+        ? "Registro guardado local. Se sincronizará con Supabase cuando haya conexión."
+        : editingRecord ? "Registro actualizado y sincronizado." : "Registro guardado y sincronizado."
     });
     clearChecklistData(false);
     setIsChecklistActive(false);
@@ -778,7 +811,7 @@ export default function RbMonitoringApp({ onHome }) {
           <h1>Aseguramiento de monitoreo roya blanca</h1>
         </div>
         <div className="header-actions">
-          <span className="source-pill">MVP local</span>
+          <span className="source-pill">{hasSupabaseConfig ? "Supabase activo" : "MVP local"}</span>
           <button type="button" className="ghost-action" onClick={returnHome}>
             Inicio
           </button>
