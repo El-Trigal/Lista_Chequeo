@@ -882,6 +882,34 @@ textarea:focus {
   color: #6e7c8f;
 }
 
+.records-loading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 96px;
+  border-bottom: 1px solid #9aaec6;
+  background: #fbfcff;
+  color: #1d3f6c;
+  font-weight: 850;
+}
+
+.loading-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid #cbd7e7;
+  border-top-color: #26619c;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 1080px) {
   .field-grid,
   .products-grid,

@@ -557,7 +557,16 @@ function RecordSummary({ record }) {
   );
 }
 
-function RecordsView({ records, recordsSource, onEditRecord }) {
+function RecordsLoadingState() {
+  return (
+    <div className="records-loading" role="status" aria-live="polite">
+      <span className="loading-spinner" aria-hidden="true" />
+      <span>Cargando registros...</span>
+    </div>
+  );
+}
+
+function RecordsView({ records, recordsSource, isLoading, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
   const [filters, setFilters] = useState({
     week: "",
@@ -651,7 +660,9 @@ function RecordsView({ records, recordsSource, onEditRecord }) {
           <span>Acción</span>
         </div>
 
-        {filteredRecords.length ? (
+        {isLoading ? (
+          <RecordsLoadingState />
+        ) : filteredRecords.length ? (
           filteredRecords.map((record) => {
             const calification = getRecordCalification(record);
 
@@ -760,6 +771,7 @@ function App() {
   const [observations, setObservations] = useState("");
   const [records, setRecords] = useState([]);
   const [recordsSource, setRecordsSource] = useState("Local");
+  const [isRecordsLoading, setIsRecordsLoading] = useState(true);
   const [saveState, setSaveState] = useState(null);
   const [expandedSections, setExpandedSections] = useState(() => createExpandedSections(true));
   const [sprayerCounts, setSprayerCounts] = useState(createInitialSprayerCounts);
@@ -773,9 +785,15 @@ function App() {
   const totalItems = result.answerableCount;
 
   async function refreshRecords() {
-    const loaded = await loadRecords();
-    setRecords(loaded.records);
-    setRecordsSource(loaded.sourceLabel);
+    setIsRecordsLoading(true);
+
+    try {
+      const loaded = await loadRecords();
+      setRecords(loaded.records);
+      setRecordsSource(loaded.sourceLabel);
+    } finally {
+      setIsRecordsLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -1116,6 +1134,7 @@ function App() {
         <RecordsView
           records={records}
           recordsSource={recordsSource}
+          isLoading={isRecordsLoading}
           onEditRecord={editRecord}
         />
       )}

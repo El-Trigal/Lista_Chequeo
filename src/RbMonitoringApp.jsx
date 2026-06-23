@@ -216,7 +216,16 @@ function RbMonitoringStartScreen({ saveState, onCreate }) {
   );
 }
 
-function RbMonitoringRecords({ records, recordsSource, onEditRecord }) {
+function RecordsLoadingState() {
+  return (
+    <div className="records-loading" role="status" aria-live="polite">
+      <span className="loading-spinner" aria-hidden="true" />
+      <span>Cargando registros...</span>
+    </div>
+  );
+}
+
+function RbMonitoringRecords({ records, recordsSource, isLoading, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
   const [filters, setFilters] = useState({
     week: "",
@@ -303,7 +312,9 @@ function RbMonitoringRecords({ records, recordsSource, onEditRecord }) {
           <span>Acción</span>
         </div>
 
-        {filteredRecords.length ? (
+        {isLoading ? (
+          <RecordsLoadingState />
+        ) : filteredRecords.length ? (
           filteredRecords.map((record) => (
             <Fragment key={record.id}>
               <div
@@ -651,6 +662,7 @@ export default function RbMonitoringApp({ onHome }) {
   const [expandedSections, setExpandedSections] = useState(() => createExpandedSections(true));
   const [records, setRecords] = useState([]);
   const [recordsSource, setRecordsSource] = useState("Local");
+  const [isRecordsLoading, setIsRecordsLoading] = useState(true);
   const [saveState, setSaveState] = useState(null);
   const [editingRecord, setEditingRecord] = useState(null);
 
@@ -662,9 +674,15 @@ export default function RbMonitoringApp({ onHome }) {
   const answerableCount = RB_MONITORING_ITEMS.length + 2;
 
   async function refreshRecords() {
-    const loaded = await loadRbMonitoringRecords();
-    setRecords(loaded.records);
-    setRecordsSource(loaded.sourceLabel);
+    setIsRecordsLoading(true);
+
+    try {
+      const loaded = await loadRbMonitoringRecords();
+      setRecords(loaded.records);
+      setRecordsSource(loaded.sourceLabel);
+    } finally {
+      setIsRecordsLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -969,6 +987,7 @@ export default function RbMonitoringApp({ onHome }) {
         <RbMonitoringRecords
           records={records}
           recordsSource={recordsSource}
+          isLoading={isRecordsLoading}
           onEditRecord={editRecord}
         />
       )}
