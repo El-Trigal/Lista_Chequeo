@@ -1,5 +1,12 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
+  RecordFilters,
+  createEmptyRecordFilters,
+  getRecordFilterOptions,
+  matchesRecordFilters,
+  toggleRecordFilterValue
+} from "./RecordFilters";
+import {
   RB_MONITORING_AGE_TIMES,
   RB_MONITORING_CONTROL_SCORE,
   RB_MONITORING_ITEMS,
@@ -16,8 +23,7 @@ import { formatNumber } from "./lib/checklistMath";
 import {
   downloadRbRecordsExcel,
   getCurrentWeekCode,
-  getRbRecordWeekCode,
-  matchesExportFilters
+  getRbRecordWeekCode
 } from "./lib/excelExport";
 import { hasSupabaseConfig } from "./lib/supabase";
 import { sanitizeDecimalInput } from "./lib/inputFormat";
@@ -234,27 +240,37 @@ function RecordsLoadingState() {
 
 function RbMonitoringRecords({ records, recordsSource, isLoading, permissions, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
-  const [filters, setFilters] = useState({
-    week: "",
-    collaborator: "",
-    assurer: ""
-  });
-  const filteredRecords = useMemo(() => records.filter((record) =>
-    matchesExportFilters(
-      {
-        week: getRbRecordWeekCode(record),
-        collaborator: record.form?.monitorName,
-        assurer: record.form?.assurerName
-      },
-      filters
-    )
-  ), [records, filters]);
+  const [draftFilters, setDraftFilters] = useState(createEmptyRecordFilters);
+  const [appliedFilters, setAppliedFilters] = useState(createEmptyRecordFilters);
 
-  function updateFilter(field, value) {
-    setFilters((current) => ({
-      ...current,
-      [field]: value
-    }));
+  function getFilterValues(record) {
+    return {
+      week: getRbRecordWeekCode(record),
+      date: record.savedDate,
+      collaborator: record.form?.monitorName,
+      assurer: record.form?.assurerName
+    };
+  }
+
+  const filterOptions = useMemo(() =>
+    getRecordFilterOptions(records, getFilterValues),
+  [records]);
+  const filteredRecords = useMemo(() => records.filter((record) =>
+    matchesRecordFilters(getFilterValues(record), appliedFilters)
+  ), [records, appliedFilters]);
+
+  function toggleFilter(field, value) {
+    setDraftFilters((current) => toggleRecordFilterValue(current, field, value));
+  }
+
+  function applyFilters() {
+    setAppliedFilters(draftFilters);
+  }
+
+  function clearFilters() {
+    const emptyFilters = createEmptyRecordFilters();
+    setDraftFilters(emptyFilters);
+    setAppliedFilters(emptyFilters);
   }
 
   function handleDownloadExcel() {
@@ -274,33 +290,14 @@ function RbMonitoringRecords({ records, recordsSource, isLoading, permissions, o
           <h2>Chequeos guardados</h2>
         </div>
         <div className="records-actions">
-          <div className="records-filters" aria-label="Filtros de registros">
-            <label className="records-filter">
-              <span>Semana</span>
-              <input
-                type="search"
-                value={filters.week}
-                onChange={(event) => updateFilter("week", event.target.value)}
-              />
-            </label>
-            <label className="records-filter">
-              <span>Colaborador</span>
-              <input
-                type="search"
-                value={filters.collaborator}
-                onChange={(event) => updateFilter("collaborator", event.target.value)}
-                placeholder="Monitor"
-              />
-            </label>
-            <label className="records-filter">
-              <span>Asegurador</span>
-              <input
-                type="search"
-                value={filters.assurer}
-                onChange={(event) => updateFilter("assurer", event.target.value)}
-              />
-            </label>
-          </div>
+          <RecordFilters
+            options={filterOptions}
+            draftFilters={draftFilters}
+            appliedFilters={appliedFilters}
+            onToggle={toggleFilter}
+            onApply={applyFilters}
+            onClear={clearFilters}
+          />
           {permissions.canDownloadExcel ? (
             <button type="button" className="secondary-action" onClick={handleDownloadExcel}>
               Descargar Excel

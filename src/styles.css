@@ -201,30 +201,112 @@ h3 {
   gap: 8px;
 }
 
-.records-filter {
-  display: grid;
-  gap: 4px;
+.records-filter-dropdown {
+  position: relative;
+  min-width: 150px;
   color: #31435d;
   font-size: 0.74rem;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-.records-filter input {
-  width: 150px;
+.records-filter-dropdown:first-child {
+  min-width: 96px;
+}
+
+.records-filter-dropdown summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 10px;
+  align-items: center;
   min-height: 36px;
   border: 1px solid #9aaec6;
   border-radius: 6px;
   padding: 7px 9px;
   background: #ffffff;
   color: #16243a;
-  font: inherit;
-  font-size: 0.86rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.records-filter-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.records-filter-dropdown summary::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #26619c;
+  border-bottom: 2px solid #26619c;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.records-filter-dropdown[open] summary::after {
+  transform: rotate(225deg);
+}
+
+.records-filter-label {
+  grid-column: 1 / -1;
+  line-height: 1;
+}
+
+.records-filter-value {
+  color: #5b6f8a;
+  font-size: 0.82rem;
+  font-weight: 750;
   text-transform: none;
 }
 
-.records-filter:first-child input {
-  width: 92px;
+.records-filter-menu {
+  position: absolute;
+  z-index: 25;
+  top: calc(100% + 4px);
+  left: 0;
+  width: min(280px, 82vw);
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #5f718a;
+  border-radius: 8px;
+  box-shadow: 0 14px 28px rgba(22, 36, 58, 0.18);
+  background: #ffffff;
+  padding: 6px;
+}
+
+.records-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  padding: 7px 8px;
+  color: #16243a;
+  font-size: 0.86rem;
+  font-weight: 650;
+  text-transform: none;
+}
+
+.records-filter-option:hover {
+  background: #eef5fc;
+}
+
+.records-filter-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: #26619c;
+}
+
+.records-filter-empty {
+  margin: 0;
+  padding: 8px;
+  color: #6c7c92;
+  font-size: 0.84rem;
+  font-weight: 650;
+  text-transform: none;
+}
+
+.filter-action {
+  align-self: flex-end;
 }
 
 .tab-button,
@@ -1033,13 +1115,16 @@ textarea:focus {
     width: 100%;
   }
 
-  .records-filter {
-    flex: 1 1 140px;
+  .records-filter-dropdown {
+    flex: 1 1 150px;
   }
 
-  .records-filter input,
-  .records-filter:first-child input {
-    width: 100%;
+  .records-filter-dropdown:first-child {
+    min-width: 150px;
+  }
+
+  .records-filter-menu {
+    width: min(100%, 82vw);
   }
 
   .tab-button,

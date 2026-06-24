@@ -1,5 +1,12 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import RbMonitoringApp from "./RbMonitoringApp";
+import {
+  RecordFilters,
+  createEmptyRecordFilters,
+  getRecordFilterOptions,
+  matchesRecordFilters,
+  toggleRecordFilterValue
+} from "./RecordFilters";
 import { CHECKLIST_SECTIONS } from "./data/checklistConfig";
 import {
   buildInitialAnswers,
@@ -20,8 +27,7 @@ import {
 import {
   downloadSprayRecordsExcel,
   getCurrentWeekCode,
-  getSprayRecordWeekCode,
-  matchesExportFilters
+  getSprayRecordWeekCode
 } from "./lib/excelExport";
 
 const CHECKLIST_VIEW = "checklist";
@@ -607,31 +613,41 @@ function RecordsLoadingState() {
 
 function RecordsView({ records, recordsSource, isLoading, permissions, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
-  const [filters, setFilters] = useState({
-    week: "",
-    collaborator: "",
-    assurer: ""
-  });
+  const [draftFilters, setDraftFilters] = useState(createEmptyRecordFilters);
+  const [appliedFilters, setAppliedFilters] = useState(createEmptyRecordFilters);
+
+  function getFilterValues(record) {
+    return {
+      week: getSprayRecordWeekCode(record),
+      date: getRecordDate(record),
+      collaborator: record.metadata?.sprayerGroup,
+      assurer: record.metadata?.assurerName
+    };
+  }
+
+  const filterOptions = useMemo(() =>
+    getRecordFilterOptions(records, getFilterValues),
+  [records]);
   const filteredRecords = useMemo(() => records.filter((record) =>
-    matchesExportFilters(
-      {
-        week: getSprayRecordWeekCode(record),
-        collaborator: record.metadata?.sprayerGroup,
-        assurer: record.metadata?.assurerName
-      },
-      filters
-    )
-  ), [records, filters]);
+    matchesRecordFilters(getFilterValues(record), appliedFilters)
+  ), [records, appliedFilters]);
 
   function toggleRecord(recordId) {
     setExpandedRecordId((current) => (current === recordId ? null : recordId));
   }
 
-  function updateFilter(field, value) {
-    setFilters((current) => ({
-      ...current,
-      [field]: value
-    }));
+  function toggleFilter(field, value) {
+    setDraftFilters((current) => toggleRecordFilterValue(current, field, value));
+  }
+
+  function applyFilters() {
+    setAppliedFilters(draftFilters);
+  }
+
+  function clearFilters() {
+    const emptyFilters = createEmptyRecordFilters();
+    setDraftFilters(emptyFilters);
+    setAppliedFilters(emptyFilters);
   }
 
   function handleDownloadExcel() {
@@ -651,33 +667,14 @@ function RecordsView({ records, recordsSource, isLoading, permissions, onEditRec
           <h2>Chequeos guardados</h2>
         </div>
         <div className="records-actions">
-          <div className="records-filters" aria-label="Filtros de registros">
-            <label className="records-filter">
-              <span>Semana</span>
-              <input
-                type="search"
-                value={filters.week}
-                onChange={(event) => updateFilter("week", event.target.value)}
-              />
-            </label>
-            <label className="records-filter">
-              <span>Colaborador</span>
-              <input
-                type="search"
-                value={filters.collaborator}
-                onChange={(event) => updateFilter("collaborator", event.target.value)}
-                placeholder="Grupo aspersión"
-              />
-            </label>
-            <label className="records-filter">
-              <span>Asegurador</span>
-              <input
-                type="search"
-                value={filters.assurer}
-                onChange={(event) => updateFilter("assurer", event.target.value)}
-              />
-            </label>
-          </div>
+          <RecordFilters
+            options={filterOptions}
+            draftFilters={draftFilters}
+            appliedFilters={appliedFilters}
+            onToggle={toggleFilter}
+            onApply={applyFilters}
+            onClear={clearFilters}
+          />
           {permissions.canDownloadExcel ? (
             <button type="button" className="secondary-action" onClick={handleDownloadExcel}>
               Descargar Excel
