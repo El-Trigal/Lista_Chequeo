@@ -73,7 +73,6 @@ export const RB_MONITORING_SIMULACROS_SCORE = 20;
 export const RB_MONITORING_CONTROL_SCORE = 100;
 
 export const RB_MONITORING_AGE_TIMES = [
-  { id: "edad_1_4", label: "Edad 1-4", minutes: "12 min" },
-  { id: "edad_5_7", label: "Edad 5-7", minutes: "20 min" },
-  { id: "edad_8_12", label: "Edad 8-12", minutes: "30 min" }
+  { id: "edad_1_7", label: "Edad 1-7 semanas", minutes: "10 min" },
+  { id: "edad_8_12", label: "Edad 8-12 semanas", minutes: "30 min" }
 ];
