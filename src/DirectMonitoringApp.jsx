@@ -17,7 +17,7 @@ import {
   updateDirectMonitoringRecord
 } from "./lib/directMonitoringRecords";
 import { formatNumber } from "./lib/checklistMath";
-import { getCurrentWeekCode } from "./lib/excelExport";
+import { downloadDirectMonitoringRecordsExcel, getCurrentWeekCode } from "./lib/excelExport";
 import { hasSupabaseConfig } from "./lib/supabase";
 import { sanitizeDecimalInput } from "./lib/inputFormat";
 
@@ -370,6 +370,15 @@ function DirectMonitoringRecords({ records, recordsSource, isLoading, permission
     setAppliedFilters(emptyFilters);
   }
 
+  function handleDownloadExcel() {
+    if (!filteredRecords.length) {
+      window.alert("No hay registros para descargar con los filtros actuales.");
+      return;
+    }
+
+    downloadDirectMonitoringRecordsExcel(filteredRecords);
+  }
+
   return (
     <section className="records-section">
       <div className="records-heading">
@@ -386,6 +395,13 @@ function DirectMonitoringRecords({ records, recordsSource, isLoading, permission
             onApply={applyFilters}
             onClear={clearFilters}
           />
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={handleDownloadExcel}
+          >
+            Descargar Excel
+          </button>
           <span className="source-pill">{recordsSource}</span>
         </div>
       </div>

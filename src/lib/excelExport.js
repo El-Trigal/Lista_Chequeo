@@ -1,4 +1,5 @@
 import { CHECKLIST_SECTIONS } from "../data/checklistConfig";
+import { DIRECT_MONITORING_ITEMS } from "../data/directMonitoringConfig";
 import {
   RB_MONITORING_CONTROL_SCORE,
   RB_MONITORING_ITEMS,
@@ -9,6 +10,12 @@ import { calculateMatrixSection } from "./checklistMath";
 
 const SPRAY_LABOR = "APLICACIÓN DE PLAGUICIDAS";
 const RB_LABOR = "MONITOREO ROYA BLANCA";
+const DIRECT_LABOR = "MONITOREO DIRECTO";
+const DIRECT_MONITORING_ASSIGNED_BEDS = 30;
+const DIRECT_MONITORING_RENDIMIENTO_SCORE = 20;
+const DIRECT_MONITORING_REGISTRO_SCORE = 75;
+const DIRECT_MONITORING_REQUERIMIENTOS_SCORE = 50;
+const DIRECT_MONITORING_SITE_SCORE = 3;
 const HEADER_CELLS = [
   { column: "B", value: "SEMANA" },
   { column: "C", value: "ÍTEM" },
@@ -81,6 +88,11 @@ export function getSprayRecordWeekCode(record) {
 }
 
 export function getRbRecordWeekCode(record) {
+  return record.weekCode
+    ?? getWeekCodeFromDate(record.finishedAt ?? record.createdAt ?? record.savedDate);
+}
+
+export function getDirectRecordWeekCode(record) {
   return record.weekCode
     ?? getWeekCodeFromDate(record.finishedAt ?? record.createdAt ?? record.savedDate);
 }
@@ -835,5 +847,76 @@ export function downloadRbRecordsExcel(records) {
       }
     ],
     fileName: `monitoreo-roya-blanca-${getExportDateStamp()}.xlsx`
+  });
+}
+
+
+function getDirectRendimientoScore(form = {}) {
+  const monitoredBeds = Math.max(
+    0,
+    Math.min(DIRECT_MONITORING_ASSIGNED_BEDS, Number(form.monitoredBeds) || 0)
+  );
+
+  return Math.round(
+    (monitoredBeds / DIRECT_MONITORING_ASSIGNED_BEDS) * DIRECT_MONITORING_RENDIMIENTO_SCORE
+  );
+}
+
+function getDirectRegistroScore(form = {}) {
+  const directBeds = Array.isArray(form.directBeds) ? form.directBeds : [];
+
+  return directBeds.reduce((score, bed) => {
+    const sites = Array.isArray(bed.sites) ? bed.sites : [];
+    return score + (sites.filter((status) => status === "yes").length * DIRECT_MONITORING_SITE_SCORE);
+  }, 0);
+}
+
+function getDirectRequerimientosScore(form = {}) {
+  const answers = form.answers ?? {};
+  const section = DIRECT_MONITORING_ITEMS.find((item) => item.id === "informe_planos");
+
+  return (section?.controls ?? []).reduce((score, control) =>
+    score + (answers[control.id] === "yes" ? control.weight : 0),
+  0);
+}
+
+function buildDirectExportRows(records) {
+  return records.flatMap((record) => {
+    const form = record.form ?? {};
+    const collaborator = form.monitorName ?? "";
+    const assurer = form.assurerName ?? "";
+    const week = getDirectRecordWeekCode(record);
+
+    const rows = [
+      [1, "RENDIMIENTO", DIRECT_MONITORING_RENDIMIENTO_SCORE, getDirectRendimientoScore(form)],
+      [2, "CALIDAD", DIRECT_MONITORING_REGISTRO_SCORE, getDirectRegistroScore(form)],
+      [3, "REQUERIMIENTOS", DIRECT_MONITORING_REQUERIMIENTOS_SCORE, getDirectRequerimientosScore(form)]
+    ];
+
+    return rows.map(([item, concept, expected, result]) => ({
+      scope: DIRECT_LABOR + item,
+      week,
+      item,
+      concept,
+      collaborator,
+      expected,
+      result: roundScore(result),
+      percent: getPercent(result, expected),
+      assurer,
+      labor: DIRECT_LABOR,
+      nonConformingStems: ""
+    }));
+  });
+}
+
+export function downloadDirectMonitoringRecordsExcel(records) {
+  downloadWorkbook({
+    worksheets: [
+      {
+        name: "Monitoreo directo",
+        content: buildWorksheetXml(buildDirectExportRows(records))
+      }
+    ],
+    fileName: "monitoreo-directo-" + getExportDateStamp() + ".xlsx"
   });
 }
