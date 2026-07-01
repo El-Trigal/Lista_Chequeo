@@ -395,13 +395,11 @@ function DirectMonitoringRecords({ records, recordsSource, isLoading, permission
             onApply={applyFilters}
             onClear={clearFilters}
           />
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={handleDownloadExcel}
-          >
-            Descargar Excel
-          </button>
+          {permissions.canDownloadExcel ? (
+            <button type="button" className="secondary-action" onClick={handleDownloadExcel}>
+              Descargar Excel
+            </button>
+          ) : null}
           <span className="source-pill">{recordsSource}</span>
         </div>
       </div>
