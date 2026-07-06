@@ -23,7 +23,7 @@ import { sanitizeDecimalInput } from "./lib/inputFormat";
 
 const CHECKLIST_VIEW = "checklist";
 const RECORDS_VIEW = "records";
-const DIRECT_MONITORING_ASSIGNED_BEDS = 30;
+const DIRECT_MONITORING_ASSIGNED_BEDS = 20;
 const DIRECT_MONITORING_BED_COUNT = 5;
 const DIRECT_MONITORING_SITE_COUNT = 5;
 const DIRECT_MONITORING_SITE_SCORE = 3;
@@ -732,7 +732,7 @@ function DirectMonitoringSection({
                 <input type="text" value={DIRECT_MONITORING_ASSIGNED_BEDS} disabled readOnly />
               </label>
               <label className="form-field">
-                <span>Número de camas monitoreadas en el día</span>
+                <span>Número de camas monitoreadas por hora</span>
                 <input
                   type="text"
                   inputMode="decimal"
