@@ -191,7 +191,7 @@ function calculateTswvScore(form) {
   if (String(form.monitoredBeds).trim()) {
     const row = {
       sectionTitle: "Rendimiento",
-      itemLabel: "Número de camas monitoreadas en el día",
+      itemLabel: "Número de camas monitoreadas por hora",
       criterion: `${formatNumber(Number(form.monitoredBeds) || 0)} de ${TSWV_ASSIGNED_BEDS} camas monitoreadas.`,
       weight: TSWV_RENDIMIENTO_SCORE
     };
@@ -373,7 +373,7 @@ function RendimientoSection({ form, expanded, onToggle, onChange, readOnly }) {
               <input type="text" value={TSWV_ASSIGNED_BEDS} disabled readOnly />
             </label>
             <label className="form-field">
-              <span>Número de camas monitoreadas en el día</span>
+              <span>Número de camas monitoreadas por hora</span>
               <input
                 inputMode="decimal"
                 value={form.monitoredBeds}

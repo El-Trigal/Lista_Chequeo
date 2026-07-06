@@ -83,7 +83,7 @@ function calculateAspiradoScore(form) {
   const compliant = [];
   const nonCompliant = [];
   if (String(form.monitoredBeds).trim()) {
-    const row = { sectionTitle: "Rendimiento", itemLabel: "Número de camas aspiradas en el día", criterion: `${formatNumber(Number(form.monitoredBeds) || 0)} de ${ASSIGNED_BEDS} camas asignadas en una hora.`, weight: RENDIMIENTO_SCORE };
+    const row = { sectionTitle: "Rendimiento", itemLabel: "Número de camas aspiradas por hora", criterion: `${formatNumber(Number(form.monitoredBeds) || 0)} de ${ASSIGNED_BEDS} camas asignadas en una hora.`, weight: RENDIMIENTO_SCORE };
     (rendimientoScore >= RENDIMIENTO_SCORE ? compliant : nonCompliant).push(row);
   }
   for (const item of REQUIREMENTS) {
@@ -114,7 +114,7 @@ function SummaryTable({ result, observations, onSave, canSave = false, compact =
 function RendimientoSection({ form, expanded, onToggle, onChange, readOnly }) {
   const complete = isRendimientoComplete(form);
   const score = calculateRendimientoScore(form.monitoredBeds);
-  return <section className={complete ? "section-band completed-section" : "section-band"}><SectionHeader number="1" title="Rendimiento" expanded={expanded} onToggle={onToggle} rightSlot={<div className="section-score">{formatNumber(score)} / {formatNumber(RENDIMIENTO_SCORE)}</div>} />{expanded ? <div className="collapsible-content"><div className="field-grid rb-monitoring-fields"><label className="form-field"><span>Aspirador</span><input value={form.aspiratorName} readOnly={readOnly} onChange={(event) => onChange({ aspiratorName: event.target.value })} /></label><label className="form-field"><span>Asegurador</span><input value={form.assurerName} readOnly={readOnly} onChange={(event) => onChange({ assurerName: event.target.value })} /></label><label className="form-field"><span>Número de camas asignadas en una hora</span><input type="text" value={ASSIGNED_BEDS} disabled readOnly /></label><label className="form-field"><span>Número de camas aspiradas en el día</span><input inputMode="decimal" value={form.monitoredBeds} readOnly={readOnly} onChange={(event) => onChange({ monitoredBeds: sanitizeMonitoredBedsInput(event.target.value) })} /></label></div></div> : null}</section>;
+  return <section className={complete ? "section-band completed-section" : "section-band"}><SectionHeader number="1" title="Rendimiento" expanded={expanded} onToggle={onToggle} rightSlot={<div className="section-score">{formatNumber(score)} / {formatNumber(RENDIMIENTO_SCORE)}</div>} />{expanded ? <div className="collapsible-content"><div className="field-grid rb-monitoring-fields"><label className="form-field"><span>Aspirador</span><input value={form.aspiratorName} readOnly={readOnly} onChange={(event) => onChange({ aspiratorName: event.target.value })} /></label><label className="form-field"><span>Asegurador</span><input value={form.assurerName} readOnly={readOnly} onChange={(event) => onChange({ assurerName: event.target.value })} /></label><label className="form-field"><span>Número de camas asignadas en una hora</span><input type="text" value={ASSIGNED_BEDS} disabled readOnly /></label><label className="form-field"><span>Número de camas aspiradas por hora</span><input inputMode="decimal" value={form.monitoredBeds} readOnly={readOnly} onChange={(event) => onChange({ monitoredBeds: sanitizeMonitoredBedsInput(event.target.value) })} /></label></div></div> : null}</section>;
 }
 
 function ItemsSection({ number, title, items, answers, score, total, expanded, onToggle, onAnswerChange, readOnly }) {
