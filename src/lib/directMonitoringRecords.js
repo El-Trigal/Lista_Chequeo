@@ -226,3 +226,20 @@ export async function updateDirectMonitoringRecord(record) {
 
   return localRecords;
 }
+
+export async function deleteDirectMonitoringRecord(recordId) {
+  const existingRecords = readLocalRecords();
+
+  if (hasSupabaseConfig && supabase) {
+    const { error } = await supabase.from(TABLE_NAME).delete().eq("id", recordId);
+
+    if (error) {
+      throw error;
+    }
+  }
+
+  const nextRecords = existingRecords.filter((record) => record.id !== recordId);
+  writeLocalRecords(nextRecords);
+  return nextRecords;
+}
+

@@ -25,17 +25,20 @@ export const ROLE_PERMISSIONS = {
   jefe: {
     canCreateChecklists: true,
     canEditRecords: true,
-    canDownloadExcel: true
+    canDownloadExcel: true,
+    canDeleteRecords: true
   },
   operario: {
     canCreateChecklists: true,
     canEditRecords: true,
-    canDownloadExcel: false
+    canDownloadExcel: false,
+    canDeleteRecords: false
   },
   auxiliar: {
     canCreateChecklists: false,
     canEditRecords: false,
-    canDownloadExcel: true
+    canDownloadExcel: true,
+    canDeleteRecords: false
   }
 };
 

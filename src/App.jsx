@@ -18,7 +18,7 @@ import {
   formatNumber,
   getMatrixAnswerId
 } from "./lib/checklistMath";
-import { loadRecords, saveRecord, updateRecord } from "./lib/records";
+import { deleteRecord, loadRecords, saveRecord, updateRecord } from "./lib/records";
 import { hasSupabaseConfig } from "./lib/supabase";
 import { sanitizeDecimalInput } from "./lib/inputFormat";
 import {
@@ -1181,6 +1181,26 @@ function App() {
     setView(CHECKLIST_VIEW);
   }
 
+  async function handleDeleteRecord() {
+    if (!editingRecord || !permissions.canDeleteRecords) {
+      return;
+    }
+
+    const shouldDelete = window.confirm("¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.");
+    if (!shouldDelete) return;
+
+    try {
+      const nextRecords = await deleteRecord(editingRecord.id);
+      setRecords(nextRecords);
+      setRecordsSource(getLocalSourceLabel(nextRecords));
+      setSaveState({ type: "success-message", message: "Registro eliminado." });
+      clearChecklistData(false);
+      setIsChecklistActive(false);
+      setView(RECORDS_VIEW);
+    } catch {
+      window.alert("No se pudo eliminar el registro. Revisa la conexión o los permisos en Supabase.");
+    }
+  }
   async function handleLogout() {
     await clearSessionUser();
     setCurrentUser(null);
@@ -1323,6 +1343,11 @@ function App() {
                   <span>Modo</span>
                   <strong>{permissions.canEditRecords ? "Edición" : "Visualización"}</strong>
                 </div>
+                {permissions.canDeleteRecords ? (
+                  <button type="button" className="danger-action" onClick={handleDeleteRecord}>
+                    Eliminar registro
+                  </button>
+                ) : null}
                 <button type="button" className="danger-action" onClick={cancelEditRecord}>
                   Salir
                 </button>

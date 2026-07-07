@@ -12,6 +12,7 @@ import { downloadTswvRecordsExcel, getCurrentWeekCode } from "./lib/excelExport"
 import { sanitizeDecimalInput } from "./lib/inputFormat";
 import { hasSupabaseConfig } from "./lib/supabase";
 import {
+  deleteTswvRecord,
   loadTswvRecords,
   saveTswvRecord,
   updateTswvRecord
@@ -833,12 +834,33 @@ export default function TswvChecklistApp({ currentUser, permissions, onHome, onL
     setSaveState({
       type: "success-message",
       message: isPending
-        ? "Registro guardado local. Se sincronizar? con Supabase cuando haya conexi?n."
+        ? "Registro guardado local. Se sincronizará con Supabase cuando haya conexión."
         : editingRecord ? "Registro actualizado y sincronizado." : "Registro guardado y sincronizado."
     });
     clearChecklistData(false);
     setIsChecklistActive(false);
     setView(CHECKLIST_VIEW);
+  }
+
+  async function handleDeleteRecord() {
+    if (!editingRecord || !permissions.canDeleteRecords) {
+      return;
+    }
+
+    const shouldDelete = window.confirm("¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.");
+    if (!shouldDelete) return;
+
+    try {
+      const nextRecords = await deleteTswvRecord(editingRecord.id);
+      setRecords(nextRecords);
+      setRecordsSource(getLocalSourceLabel(nextRecords));
+      setSaveState({ type: "success-message", message: "Registro eliminado." });
+      clearChecklistData(false);
+      setIsChecklistActive(false);
+      setView(RECORDS_VIEW);
+    } catch {
+      window.alert("No se pudo eliminar el registro. Revisa la conexión o los permisos en Supabase.");
+    }
   }
 
   return (
@@ -871,6 +893,11 @@ export default function TswvChecklistApp({ currentUser, permissions, onHome, onL
                     <span>Modo</span>
                     <strong>{permissions.canEditRecords ? "Edición" : "Visualización"}</strong>
                   </div>
+                  {permissions.canDeleteRecords ? (
+                    <button type="button" className="danger-action" onClick={handleDeleteRecord}>
+                      Eliminar registro
+                    </button>
+                  ) : null}
                   <button type="button" className="danger-action" onClick={cancelEditRecord}>
                     Salir
                   </button>
