@@ -130,16 +130,20 @@ function calculateMonitoringScore(form) {
     form.rendimientoStatus === "yes" ? RB_MONITORING_RENDIMIENTO_SCORE : 0;
   const simulacrosMode = form.simulacrosMode ?? null;
   const isSpecialSimulacros = Boolean(simulacrosMode);
+  const hasExplicitZeroSimulacros = form.sites.every(
+    (site) => String(site.disposed).trim() === "0" && String(site.found).trim() === "0"
+  );
+  const hasFullSimulacrosScore = isSpecialSimulacros || hasExplicitZeroSimulacros;
 
   const rawTotalDisposed = form.sites.reduce(
     (sum, site) => sum + (Number(site.disposed) || 0),
     0
   );
   const rawTotalFound = form.sites.reduce((sum, site) => sum + (Number(site.found) || 0), 0);
-  const totalDisposed = isSpecialSimulacros ? 0 : rawTotalDisposed;
-  const totalFound = isSpecialSimulacros ? 0 : rawTotalFound;
-  const simulacrosPercent = isSpecialSimulacros ? 100 : totalDisposed > 0 ? (totalFound / totalDisposed) * 100 : 0;
-  const simulacrosScore = isSpecialSimulacros
+  const totalDisposed = hasFullSimulacrosScore ? 0 : rawTotalDisposed;
+  const totalFound = hasFullSimulacrosScore ? 0 : rawTotalFound;
+  const simulacrosPercent = hasFullSimulacrosScore ? 100 : totalDisposed > 0 ? (totalFound / totalDisposed) * 100 : 0;
+  const simulacrosScore = hasFullSimulacrosScore
     ? RB_MONITORING_SIMULACROS_SCORE
     : totalDisposed <= 0
       ? 0
@@ -148,7 +152,6 @@ function calculateMonitoringScore(form) {
         : simulacrosPercent >= 80
           ? 15
           : 5;
-
   const controlScore = RB_MONITORING_ITEMS.reduce((sum, item) => {
     return sum + (form.controlAnswers[item.id] === "yes" ? item.weight : 0);
   }, 0);
@@ -187,7 +190,7 @@ function calculateMonitoringScore(form) {
     weight: simulacrosScore
   };
 
-  if (simulacrosModeLabel || (totalDisposed > 0 && simulacrosPercent >= 90)) {
+  if (hasFullSimulacrosScore || simulacrosModeLabel || (totalDisposed > 0 && simulacrosPercent >= 90)) {
     compliant.push(simulacrosRow);
   } else if (totalDisposed > 0) {
     nonCompliant.push(simulacrosRow);
@@ -218,6 +221,23 @@ function calculateMonitoringScore(form) {
     percent,
     compliant,
     nonCompliant
+  };
+}
+
+function normalizeRbMonitoringRecord(record) {
+  const recalculated = calculateMonitoringScore({
+    ...createInitialForm(),
+    ...(record.form ?? {})
+  });
+
+  return {
+    ...record,
+    score: recalculated.totalScore,
+    percent: recalculated.percent,
+    summary: {
+      compliant: recalculated.compliant,
+      nonCompliant: recalculated.nonCompliant
+    }
   };
 }
 
@@ -763,7 +783,7 @@ export default function RbMonitoringApp({ currentUser, permissions, onHome, onLo
 
     try {
       const loaded = await loadRbMonitoringRecords();
-      setRecords(loaded.records);
+      setRecords(loaded.records.map(normalizeRbMonitoringRecord));
       setRecordsSource(loaded.sourceLabel);
     } finally {
       setIsRecordsLoading(false);
@@ -898,14 +918,13 @@ export default function RbMonitoringApp({ currentUser, permissions, onHome, onLo
     }
 
     const savedAt = new Date();
-    const weekCode = getCurrentWeekCode();
     const record = {
       id: editingRecord?.id ?? crypto.randomUUID(),
       createdAt: editingRecord?.createdAt ?? savedAt.toISOString(),
-      finishedAt: savedAt.toISOString(),
-      savedDate: formatSavedDate(savedAt),
-      savedTime: formatSavedTime(savedAt),
-      weekCode,
+      finishedAt: editingRecord?.finishedAt ?? savedAt.toISOString(),
+      savedDate: editingRecord?.savedDate ?? formatSavedDate(savedAt),
+      savedTime: editingRecord?.savedTime ?? formatSavedTime(savedAt),
+      weekCode: editingRecord?.weekCode ?? getCurrentWeekCode(),
       form,
       score: result.totalScore,
       percent: result.percent,

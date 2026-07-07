@@ -1135,16 +1135,17 @@ function App() {
       return;
     }
     const savedAt = new Date();
-    const savedAtIso = savedAt.toISOString();
-    const weekCode = getCurrentWeekCode();
+    const originalMetadata = editingRecord?.metadata ?? {};
+    const savedAtIso = editingRecord?.finishedAt ?? savedAt.toISOString();
+    const weekCode = originalMetadata.weekCode ?? getCurrentWeekCode();
     const record = {
       id: editingRecord?.id ?? crypto.randomUUID(),
       createdAt: editingRecord?.createdAt ?? savedAtIso,
       finishedAt: savedAtIso,
       metadata: {
         ...metadata,
-        savedDate: formatSavedDate(savedAt),
-        savedTime: formatSavedTime(savedAt),
+        savedDate: originalMetadata.savedDate ?? formatSavedDate(savedAt),
+        savedTime: originalMetadata.savedTime ?? formatSavedTime(savedAt),
         weekCode,
         sprayerCounts
       },

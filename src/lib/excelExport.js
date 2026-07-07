@@ -315,15 +315,20 @@ function buildSprayExportRows(records) {
 }
 
 function getRbSimulacrosScore(form) {
-  if (form.simulacrosMode) {
+  const sites = Array.isArray(form.sites) ? form.sites : [];
+  const hasExplicitZeroSimulacros = sites.every(
+    (site) => String(site.disposed).trim() === "0" && String(site.found).trim() === "0"
+  );
+
+  if (form.simulacrosMode || hasExplicitZeroSimulacros) {
     return RB_MONITORING_SIMULACROS_SCORE;
   }
 
-  const totalDisposed = form.sites.reduce(
+  const totalDisposed = sites.reduce(
     (sum, site) => sum + (Number(site.disposed) || 0),
     0
   );
-  const totalFound = form.sites.reduce(
+  const totalFound = sites.reduce(
     (sum, site) => sum + (Number(site.found) || 0),
     0
   );
@@ -353,7 +358,8 @@ function buildRbExportRows(records) {
     const rendimientoScore =
       form.rendimientoStatus === "yes" ? RB_MONITORING_RENDIMIENTO_SCORE : 0;
     const simulacrosScore = getRbSimulacrosScore({
-      sites: form.sites ?? []
+      sites: form.sites ?? [],
+      simulacrosMode: form.simulacrosMode
     });
     const controlScore = RB_MONITORING_ITEMS.reduce((score, item) => {
       return score + (form.controlAnswers?.[item.id] === "yes" ? item.weight : 0);
