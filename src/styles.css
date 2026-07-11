@@ -1382,3 +1382,9 @@ textarea:focus {
   }
 }
 
+
+
+.rooting-simulacros-head,
+.rooting-simulacros-row {
+  grid-template-columns: 0.7fr 1.4fr 1fr 1fr;
+}

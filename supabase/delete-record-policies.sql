@@ -4,6 +4,7 @@ grant delete on public.direct_monitoring_records to authenticated;
 grant delete on public.tswv_checklist_records to authenticated;
 grant delete on public.aspirado_checklist_records to authenticated;
 grant delete on public.soplado_checklist_records to authenticated;
+grant delete on public.rb_rooting_records to authenticated;
 
 drop policy if exists "spray_checklist_records_delete" on public.spray_checklist_records;
 create policy "spray_checklist_records_delete"
@@ -43,6 +44,13 @@ using (true);
 drop policy if exists "soplado_checklist_records_delete" on public.soplado_checklist_records;
 create policy "soplado_checklist_records_delete"
 on public.soplado_checklist_records
+for delete
+to authenticated
+using (true);
+
+drop policy if exists "rb_rooting_records_delete" on public.rb_rooting_records;
+create policy "rb_rooting_records_delete"
+on public.rb_rooting_records
 for delete
 to authenticated
 using (true);

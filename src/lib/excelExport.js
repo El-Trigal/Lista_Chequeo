@@ -409,6 +409,64 @@ function buildRbExportRows(records) {
   });
 }
 
+const RB_ROOTING_LABOR = "MONITOREO RB BANCOS DE ENRAIZAMIENTO";
+const RB_ROOTING_RENDIMIENTO_SCORE = 10;
+const RB_ROOTING_SIMULACROS_SCORE = 20;
+const RB_ROOTING_REPORTE_SCORE = 10;
+const RB_ROOTING_REQUIREMENTS_SCORE = RB_ROOTING_SIMULACROS_SCORE + RB_ROOTING_REPORTE_SCORE;
+const RB_ROOTING_QUALITY_SCORE = 100;
+const RB_ROOTING_QUALITY_WEIGHTS = {
+  kit_monitoreo: 15,
+  unidad_monitorear: 5,
+  desglose_labor: 20,
+  disposicion_varas: 5,
+  desinfeccion_varas: 5,
+  recoleccion_hallazgo: 10,
+  reporte_sintomatologia: 5,
+  reporte_hallazgo: 10,
+  descansos: 10,
+  dispositivos: 15
+};
+function getRbRootingSimulacrosScore(form = {}) {
+  const sites = Array.isArray(form.sites) ? form.sites : [];
+  const hasExplicitZeroSimulacros = sites.length > 0 && sites.every(
+    (site) => String(site.disposed).trim() === "0" && String(site.found).trim() === "0"
+  );
+  if (hasExplicitZeroSimulacros) return RB_ROOTING_SIMULACROS_SCORE;
+  const totalDisposed = sites.reduce((sum, site) => sum + (Number(site.disposed) || 0), 0);
+  const totalFound = sites.reduce((sum, site) => sum + (Number(site.found) || 0), 0);
+  const percent = totalDisposed > 0 ? (totalFound / totalDisposed) * 100 : 0;
+  if (totalDisposed <= 0) return 0;
+  if (percent >= 90) return 20;
+  if (percent >= 80) return 15;
+  return 5;
+}
+function getRbRootingQualityScore(form = {}) {
+  const answers = form.qualityAnswers ?? {};
+  return Object.entries(RB_ROOTING_QUALITY_WEIGHTS).reduce(
+    (score, [id, weight]) => score + (answers[id] === "yes" ? weight : 0),
+    0
+  );
+}
+function buildRbRootingExportRows(records) {
+  return records.flatMap((record) => {
+    const form = record.form ?? {};
+    const collaborator = form.monitorName ?? "";
+    const assurer = form.assurerName ?? "";
+    const week = record.weekCode ?? getWeekCodeFromDate(record.finishedAt ?? record.createdAt ?? record.savedDate);
+    const rendimientoScore = Math.round((Math.max(0, Math.min(60, Number(form.monitoredTrays) || 0)) / 60) * RB_ROOTING_RENDIMIENTO_SCORE);
+    const simulacrosScore = getRbRootingSimulacrosScore(form);
+    const reportScore = form.reportStatus === "yes" ? RB_ROOTING_REPORTE_SCORE : 0;
+    const requirementsScore = simulacrosScore + reportScore;
+    const qualityScore = getRbRootingQualityScore(form);
+    return [
+      { scope: `${RB_ROOTING_LABOR}1`, week, item: 1, concept: "RENDIMIENTO", collaborator, expected: RB_ROOTING_RENDIMIENTO_SCORE, result: roundScore(rendimientoScore), percent: getPercent(rendimientoScore, RB_ROOTING_RENDIMIENTO_SCORE), assurer, labor: RB_ROOTING_LABOR, nonConformingStems: "" },
+      { scope: `${RB_ROOTING_LABOR}2`, week, item: 2, concept: "REQUERIMIENTOS", collaborator, expected: RB_ROOTING_REQUIREMENTS_SCORE, result: roundScore(requirementsScore), percent: getPercent(requirementsScore, RB_ROOTING_REQUIREMENTS_SCORE), assurer, labor: RB_ROOTING_LABOR, nonConformingStems: "" },
+      { scope: `${RB_ROOTING_LABOR}3`, week, item: 3, concept: "CALIDAD", collaborator, expected: RB_ROOTING_QUALITY_SCORE, result: roundScore(qualityScore), percent: getPercent(qualityScore, RB_ROOTING_QUALITY_SCORE), assurer, labor: RB_ROOTING_LABOR, nonConformingStems: "" }
+    ];
+  });
+}
+
 function escapeXml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -870,6 +928,13 @@ export function downloadRbRecordsExcel(records) {
   });
 }
 
+
+export function downloadRbRootingRecordsExcel(records) {
+  downloadWorkbook({
+    worksheets: [{ name: "RB bancos enraizamiento", content: buildWorksheetXml(buildRbRootingExportRows(records)) }],
+    fileName: "rb-bancos-enraizamiento-" + getExportDateStamp() + ".xlsx"
+  });
+}
 
 function getDirectRendimientoScore(form = {}) {
   const monitoredBeds = Math.max(
