@@ -2,7 +2,7 @@ const FILTER_FIELDS = [
   { id: "week", label: "Semana", emptyText: "Sin semanas" },
   { id: "date", label: "Fecha", emptyText: "Sin fechas" },
   { id: "collaborator", label: "Colaborador", emptyText: "Sin colaboradores" },
-  { id: "assurer", label: "Asegurador", emptyText: "Sin aseguradores" }
+  { id: "assurer", label: "Asegurador/a", emptyText: "Sin aseguradores/as" }
 ];
 
 function normalizeFilterValue(value) {

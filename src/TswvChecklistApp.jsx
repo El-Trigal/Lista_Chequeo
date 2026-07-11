@@ -208,7 +208,7 @@ function calculateTswvScore(form) {
     if (!form.controls[item.id]) return;
 
     const row = {
-      sectionTitle: "Monitor: búsqueda de la enfermedad de la forma correcta",
+      sectionTitle: "Monitor/a: búsqueda de la enfermedad de la forma correcta",
       itemLabel: item.label,
       criterion: item.criterion ?? item.label,
       weight: item.weight
@@ -362,11 +362,11 @@ function RendimientoSection({ form, expanded, onToggle, onChange, readOnly }) {
         <div className="collapsible-content">
           <div className="field-grid rb-monitoring-fields">
             <label className="form-field">
-              <span>Monitor</span>
+              <span>Monitor/a</span>
               <input value={form.monitorName} readOnly={readOnly} onChange={(event) => onChange({ monitorName: event.target.value })} />
             </label>
             <label className="form-field">
-              <span>Asegurador</span>
+              <span>Asegurador/a</span>
               <input value={form.assurerName} readOnly={readOnly} onChange={(event) => onChange({ assurerName: event.target.value })} />
             </label>
             <label className="form-field">
@@ -397,7 +397,7 @@ function TswvControlsSection({ form, expanded, onToggle, onAnswerChange, readOnl
     <section className={complete ? "section-band completed-section" : "section-band"}>
       <SectionHeader
         number="3"
-        title="Monitor: búsqueda de la enfermedad de la forma correcta"
+        title="Monitor/a: búsqueda de la enfermedad de la forma correcta"
         expanded={expanded}
         onToggle={onToggle}
         rightSlot={<div className="section-score">{formatNumber(score)} / {formatNumber(TSWV_CONTROL_TOTAL)}</div>}
@@ -614,7 +614,7 @@ function TswvRecords({ records, recordsSource, isLoading, permissions, onEditRec
             onToggle={toggleFilter}
             onApply={applyFilters}
             onClear={clearFilters}
-            collaboratorLabel="Monitor"
+            collaboratorLabel="Monitor/a"
           />
           {permissions.canDownloadExcel ? (
             <button type="button" className="secondary-action" onClick={handleDownloadExcel}>
@@ -626,8 +626,8 @@ function TswvRecords({ records, recordsSource, isLoading, permissions, onEditRec
       </div>
       <div className="rb-records-table">
         <div className="rb-records-head">
-          <span>Monitor</span>
-          <span>Asegurador</span>
+          <span>Monitor/a</span>
+          <span>Asegurador/a</span>
           <span>Fecha</span>
           <span>Semana</span>
           <span>Calificación</span>
@@ -639,8 +639,8 @@ function TswvRecords({ records, recordsSource, isLoading, permissions, onEditRec
         ) : filteredRecords.length ? filteredRecords.map((record) => (
           <div className="rb-record-wrapper" key={record.id}>
             <div role="button" tabIndex={0} className={expandedRecordId === record.id ? "rb-records-row expanded" : "rb-records-row"} onClick={() => setExpandedRecordId(expandedRecordId === record.id ? null : record.id)}>
-              <span>{record.form?.monitorName || "Sin monitor"}</span>
-              <span>{record.form?.assurerName || "Sin asegurador"}</span>
+              <span>{record.form?.monitorName || "Sin monitor/a"}</span>
+              <span>{record.form?.assurerName || "Sin asegurador/a"}</span>
               <span>{record.savedDate}</span>
               <span>{record.weekCode}</span>
               <span>{formatNumber(record.score)} / {TSWV_TOTAL_SCORE}</span>

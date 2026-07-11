@@ -703,7 +703,7 @@ function RecordsView({ records, recordsSource, isLoading, permissions, onEditRec
           <span>Fecha</span>
           <span>Semana</span>
           <span>Hora</span>
-          <span>Asegurador</span>
+          <span>Asegurador/a</span>
           <span>Cargo</span>
           <span>Calificación</span>
           <span>% Calif.</span>

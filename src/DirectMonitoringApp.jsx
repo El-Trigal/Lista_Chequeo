@@ -407,8 +407,8 @@ function DirectMonitoringRecords({ records, recordsSource, isLoading, permission
 
       <div className="rb-records-table">
         <div className="rb-records-head">
-          <span>Monitor</span>
-          <span>Asegurador</span>
+          <span>Monitor/a</span>
+          <span>Asegurador/a</span>
           <span>Fecha</span>
           <span>Semana</span>
           <span>Calificación</span>
@@ -711,7 +711,7 @@ function DirectMonitoringSection({
           {item.id === "rendimiento" ? (
             <div className="field-grid rb-monitoring-fields">
               <label className="form-field">
-                <span>Monitor</span>
+                <span>Monitor/a</span>
                 <input
                   type="text"
                   value={form.monitorName}

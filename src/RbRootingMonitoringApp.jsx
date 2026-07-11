@@ -453,7 +453,7 @@ function RbRootingRecords({ records, recordsSource, isLoading, permissions, onEd
             onToggle={toggleFilter}
             onApply={applyFilters}
             onClear={clearFilters}
-            collaboratorLabel="Monitor"
+            collaboratorLabel="Monitor/a"
           />
           {permissions.canDownloadExcel ? (
             <button type="button" className="secondary-action" onClick={handleDownloadExcel}>
@@ -466,8 +466,8 @@ function RbRootingRecords({ records, recordsSource, isLoading, permissions, onEd
 
       <div className="rb-records-table">
         <div className="rb-records-head">
-          <span>Monitor</span>
-          <span>Asegurador</span>
+          <span>Monitor/a</span>
+          <span>Asegurador/a</span>
           <span>Fecha</span>
           <span>Semana</span>
           <span>Calificación</span>
@@ -540,7 +540,7 @@ function RendimientoSection({ form, expanded, onToggle, onChange, score, readOnl
         <div className="collapsible-content">
           <div className="field-grid rb-monitoring-fields">
             <label className="form-field">
-              <span>Monitor</span>
+              <span>Monitor/a</span>
               <input type="text" value={form.monitorName} disabled={readOnly} onChange={(event) => onChange({ monitorName: event.target.value })} />
             </label>
             <label className="form-field">

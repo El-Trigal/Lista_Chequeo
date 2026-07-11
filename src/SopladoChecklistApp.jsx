@@ -251,8 +251,8 @@ function RendimientoSection({ form, expanded, onToggle, onChange, readOnly }) {
       {expanded ? (
         <div className="collapsible-content">
           <div className="field-grid rb-monitoring-fields">
-            <label className="form-field"><span>Soplador</span><input value={form.blowerName} readOnly={readOnly} onChange={(event) => onChange({ blowerName: event.target.value })} /></label>
-            <label className="form-field"><span>Asegurador</span><input value={form.assurerName} readOnly={readOnly} onChange={(event) => onChange({ assurerName: event.target.value })} /></label>
+            <label className="form-field"><span>Soplador/a</span><input value={form.blowerName} readOnly={readOnly} onChange={(event) => onChange({ blowerName: event.target.value })} /></label>
+            <label className="form-field"><span>Asegurador/a</span><input value={form.assurerName} readOnly={readOnly} onChange={(event) => onChange({ assurerName: event.target.value })} /></label>
             <label className="form-field"><span>Número de camas asignadas por hora</span><input type="text" value={ASSIGNED_BEDS} disabled readOnly /></label>
             <label className="form-field"><span>Número de camas sopladas por hora</span><input inputMode="decimal" value={form.monitoredBeds} readOnly={readOnly} onChange={(event) => onChange({ monitoredBeds: sanitizeMonitoredBedsInput(event.target.value) })} /></label>
           </div>
@@ -326,18 +326,18 @@ function SopladoRecords({ records, recordsSource, isLoading, permissions, onEdit
       <div className="records-heading">
         <div><span className="section-index">Registros</span><h2>Chequeos guardados</h2></div>
         <div className="records-actions">
-          <RecordFilters options={filterOptions} draftFilters={draftFilters} appliedFilters={appliedFilters} onToggle={toggleFilter} onApply={applyFilters} onClear={clearFilters} collaboratorLabel="Soplador" />
+          <RecordFilters options={filterOptions} draftFilters={draftFilters} appliedFilters={appliedFilters} onToggle={toggleFilter} onApply={applyFilters} onClear={clearFilters} collaboratorLabel="Soplador/a" />
           {permissions.canDownloadExcel ? <button type="button" className="secondary-action" onClick={handleDownloadExcel}>Descargar Excel</button> : null}
           <span className="source-pill">{recordsSource}</span>
         </div>
       </div>
       <div className="rb-records-table">
-        <div className="rb-records-head"><span>Soplador</span><span>Asegurador</span><span>Fecha</span><span>Semana</span><span>Calificación</span><span>%</span><span>Acción</span></div>
+        <div className="rb-records-head"><span>Soplador/a</span><span>Asegurador/a</span><span>Fecha</span><span>Semana</span><span>Calificación</span><span>%</span><span>Acción</span></div>
         {isLoading ? <RecordsLoadingState /> : filteredRecords.length ? filteredRecords.map((record) => (
           <div className="rb-record-wrapper" key={record.id}>
             <div role="button" tabIndex={0} className={expandedRecordId === record.id ? "rb-records-row expanded" : "rb-records-row"} onClick={() => setExpandedRecordId(expandedRecordId === record.id ? null : record.id)}>
-              <span>{record.form?.blowerName || "Sin soplador"}</span>
-              <span>{record.form?.assurerName || "Sin asegurador"}</span>
+              <span>{record.form?.blowerName || "Sin soplador/a"}</span>
+              <span>{record.form?.assurerName || "Sin asegurador/a"}</span>
               <span>{record.savedDate || "-"}</span>
               <span>{record.weekCode || "-"}</span>
               <span>{formatNumber(record.score)} / {TOTAL_SCORE}</span>
