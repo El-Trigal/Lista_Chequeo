@@ -4,6 +4,7 @@ import TswvChecklistApp from "./TswvChecklistApp";
 import AspiradoChecklistApp from "./AspiradoChecklistApp";
 import SopladoChecklistApp from "./SopladoChecklistApp";
 import RbRootingMonitoringApp from "./RbRootingMonitoringApp";
+import ColdRoomMonitoringApp from "./ColdRoomMonitoringApp";
 import RbMonitoringApp from "./RbMonitoringApp";
 import {
   RecordFilters,
@@ -44,6 +45,7 @@ const TSWV_CHECKLIST_MODULE = "tswv-checklist";
 const ASPIRADO_CHECKLIST_MODULE = "aspirado-checklist";
 const SOPLADO_CHECKLIST_MODULE = "soplado-checklist";
 const RB_ROOTING_MONITORING_MODULE = "rb-rooting-monitoring";
+const COLD_ROOM_MONITORING_MODULE = "cold-room-monitoring";
 const metadataSection = CHECKLIST_SECTIONS.find((section) => section.kind === "metadata");
 const observationSection = CHECKLIST_SECTIONS.find((section) => section.kind === "observations");
 const scoredSections = CHECKLIST_SECTIONS.filter((section) => Array.isArray(section.items));
@@ -827,7 +829,8 @@ function HomeScreen({
   onOpenTswvChecklist,
   onOpenAspiradoChecklist,
   onOpenSopladoChecklist,
-  onOpenRbRootingMonitoring
+  onOpenRbRootingMonitoring,
+  onOpenColdRoomMonitoring
 }) {
   return (
     <main className="home-shell">
@@ -868,6 +871,10 @@ function HomeScreen({
           </button>
           <button type="button" className="checklist-option" onClick={onOpenRbRootingMonitoring}>
             <span>Aseguramiento de monitoreo RB Bancos de enraizamiento</span>
+            <strong>Ingresar</strong>
+          </button>
+          <button type="button" className="checklist-option" onClick={onOpenColdRoomMonitoring}>
+            <span>Aseguramiento de monitoreo en Cuarto frío</span>
             <strong>Ingresar</strong>
           </button>
         </div>
@@ -1299,6 +1306,17 @@ function App() {
       );
     }
 
+    if (activeModule === COLD_ROOM_MONITORING_MODULE) {
+      return (
+        <ColdRoomMonitoringApp
+          currentUser={currentUser}
+          permissions={permissions}
+          onHome={() => setActiveModule(null)}
+          onLogout={handleLogout}
+        />
+      );
+    }
+
     return (
       <HomeScreen
         currentUser={currentUser}
@@ -1325,6 +1343,9 @@ function App() {
         }}
         onOpenRbRootingMonitoring={() => {
           setActiveModule(RB_ROOTING_MONITORING_MODULE);
+        }}
+        onOpenColdRoomMonitoring={() => {
+          setActiveModule(COLD_ROOM_MONITORING_MODULE);
         }}
       />
     );

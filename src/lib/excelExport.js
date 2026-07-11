@@ -467,6 +467,57 @@ function buildRbRootingExportRows(records) {
   });
 }
 
+const COLD_ROOM_LABOR = "MONITOREO CUARTO FRIO";
+const COLD_ROOM_ASSIGNED_BAGS = 120;
+const COLD_ROOM_RENDIMIENTO_SCORE = 10;
+const COLD_ROOM_CONFORMANCE_SCORE = 15;
+const COLD_ROOM_REPORT_SCORE = 10;
+const COLD_ROOM_REQUIREMENTS_SCORE = COLD_ROOM_CONFORMANCE_SCORE + COLD_ROOM_REPORT_SCORE;
+const COLD_ROOM_QUALITY_SCORE = 95;
+const COLD_ROOM_QUALITY_WEIGHTS = {
+  epp: 15,
+  unidad_monitorear: 5,
+  desglose_labor: 20,
+  marcacion_canastilla: 5,
+  recoleccion_hallazgo: 10,
+  reporte_sintomatologia: 5,
+  reporte_hallazgo: 10,
+  descansos: 10,
+  dispositivos: 15
+};
+function getColdRoomConformanceScore(form = {}) {
+  const baskets = Array.isArray(form.baskets) ? form.baskets : [];
+  return baskets.reduce((score, basket) => {
+    const bags = Array.isArray(basket?.bags) ? basket.bags : [];
+    return score + bags.filter((status) => status === "yes").length;
+  }, 0);
+}
+function getColdRoomQualityScore(form = {}) {
+  const answers = form.qualityAnswers ?? {};
+  return Object.entries(COLD_ROOM_QUALITY_WEIGHTS).reduce(
+    (score, [id, weight]) => score + (answers[id] === "yes" ? weight : 0),
+    0
+  );
+}
+function buildColdRoomExportRows(records) {
+  return records.flatMap((record) => {
+    const form = record.form ?? {};
+    const collaborator = form.monitorName ?? "";
+    const assurer = form.assurerName ?? "";
+    const week = record.weekCode ?? getWeekCodeFromDate(record.finishedAt ?? record.createdAt ?? record.savedDate);
+    const rendimientoScore = Math.round((Math.max(0, Math.min(COLD_ROOM_ASSIGNED_BAGS, Number(form.monitoredBags) || 0)) / COLD_ROOM_ASSIGNED_BAGS) * COLD_ROOM_RENDIMIENTO_SCORE);
+    const conformanceScore = getColdRoomConformanceScore(form);
+    const reportScore = form.reportStatus === "yes" ? COLD_ROOM_REPORT_SCORE : 0;
+    const requirementsScore = conformanceScore + reportScore;
+    const qualityScore = getColdRoomQualityScore(form);
+    return [
+      { scope: `${COLD_ROOM_LABOR}1`, week, item: 1, concept: "RENDIMIENTO", collaborator, expected: COLD_ROOM_RENDIMIENTO_SCORE, result: roundScore(rendimientoScore), percent: getPercent(rendimientoScore, COLD_ROOM_RENDIMIENTO_SCORE), assurer, labor: COLD_ROOM_LABOR, nonConformingStems: "" },
+      { scope: `${COLD_ROOM_LABOR}2`, week, item: 2, concept: "REQUERIMIENTOS", collaborator, expected: COLD_ROOM_REQUIREMENTS_SCORE, result: roundScore(requirementsScore), percent: getPercent(requirementsScore, COLD_ROOM_REQUIREMENTS_SCORE), assurer, labor: COLD_ROOM_LABOR, nonConformingStems: "" },
+      { scope: `${COLD_ROOM_LABOR}3`, week, item: 3, concept: "CALIDAD", collaborator, expected: COLD_ROOM_QUALITY_SCORE, result: roundScore(qualityScore), percent: getPercent(qualityScore, COLD_ROOM_QUALITY_SCORE), assurer, labor: COLD_ROOM_LABOR, nonConformingStems: "" }
+    ];
+  });
+}
+
 function escapeXml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -933,6 +984,13 @@ export function downloadRbRootingRecordsExcel(records) {
   downloadWorkbook({
     worksheets: [{ name: "RB bancos enraizamiento", content: buildWorksheetXml(buildRbRootingExportRows(records)) }],
     fileName: "rb-bancos-enraizamiento-" + getExportDateStamp() + ".xlsx"
+  });
+}
+
+export function downloadColdRoomRecordsExcel(records) {
+  downloadWorkbook({
+    worksheets: [{ name: "Monitoreo cuarto frio", content: buildWorksheetXml(buildColdRoomExportRows(records)) }],
+    fileName: "monitoreo-cuarto-frio-" + getExportDateStamp() + ".xlsx"
   });
 }
 
