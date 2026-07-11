@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import DirectMonitoringApp from "./DirectMonitoringApp";
 import TswvChecklistApp from "./TswvChecklistApp";
 import AspiradoChecklistApp from "./AspiradoChecklistApp";
+import SopladoChecklistApp from "./SopladoChecklistApp";
 import RbMonitoringApp from "./RbMonitoringApp";
 import {
   RecordFilters,
@@ -40,6 +41,7 @@ const RB_MONITORING_MODULE = "rb-monitoring";
 const DIRECT_MONITORING_MODULE = "direct-monitoring";
 const TSWV_CHECKLIST_MODULE = "tswv-checklist";
 const ASPIRADO_CHECKLIST_MODULE = "aspirado-checklist";
+const SOPLADO_CHECKLIST_MODULE = "soplado-checklist";
 const metadataSection = CHECKLIST_SECTIONS.find((section) => section.kind === "metadata");
 const observationSection = CHECKLIST_SECTIONS.find((section) => section.kind === "observations");
 const scoredSections = CHECKLIST_SECTIONS.filter((section) => Array.isArray(section.items));
@@ -821,7 +823,8 @@ function HomeScreen({
   onOpenRbMonitoring,
   onOpenDirectMonitoring,
   onOpenTswvChecklist,
-  onOpenAspiradoChecklist
+  onOpenAspiradoChecklist,
+  onOpenSopladoChecklist
 }) {
   return (
     <main className="home-shell">
@@ -854,6 +857,10 @@ function HomeScreen({
           </button>
           <button type="button" className="checklist-option" onClick={onOpenAspiradoChecklist}>
             <span>Aseguramiento de Aspirado</span>
+            <strong>Ingresar</strong>
+          </button>
+          <button type="button" className="checklist-option" onClick={onOpenSopladoChecklist}>
+            <span>Aseguramiento de Soplado</span>
             <strong>Ingresar</strong>
           </button>
         </div>
@@ -1263,6 +1270,17 @@ function App() {
       );
     }
 
+    if (activeModule === SOPLADO_CHECKLIST_MODULE) {
+      return (
+        <SopladoChecklistApp
+          currentUser={currentUser}
+          permissions={permissions}
+          onHome={() => setActiveModule(null)}
+          onLogout={handleLogout}
+        />
+      );
+    }
+
     return (
       <HomeScreen
         currentUser={currentUser}
@@ -1283,6 +1301,9 @@ function App() {
         }}
         onOpenAspiradoChecklist={() => {
           setActiveModule(ASPIRADO_CHECKLIST_MODULE);
+        }}
+        onOpenSopladoChecklist={() => {
+          setActiveModule(SOPLADO_CHECKLIST_MODULE);
         }}
       />
     );

@@ -1072,3 +1072,61 @@ export function downloadAspiradoRecordsExcel(records) {
     fileName: "aseguramiento-aspirado-" + getExportDateStamp() + ".xlsx"
   });
 }
+
+const SOPLADO_LABOR = "SOPLADO";
+const SOPLADO_ASSIGNED_BEDS = 32;
+const SOPLADO_RENDIMIENTO_SCORE = 10;
+const SOPLADO_REQUIREMENTS_SCORE = 45;
+const SOPLADO_QUALITY_SCORE = 40;
+const SOPLADO_REQUIREMENT_WEIGHTS = {
+  tapaoidos: 5,
+  guantes: 5,
+  dispositivos: 20,
+  almacenamiento: 5,
+  pantalla: 10
+};
+const SOPLADO_QUALITY_WEIGHTS = {
+  tiempo_cama: 10,
+  horarios: 5,
+  ubicacion: 5,
+  desglose: 20
+};
+function getSopladoRendimientoScore(form = {}) {
+  const monitoredBeds = Math.max(0, Math.min(SOPLADO_ASSIGNED_BEDS, Number(form.monitoredBeds) || 0));
+  return Math.round((monitoredBeds / SOPLADO_ASSIGNED_BEDS) * SOPLADO_RENDIMIENTO_SCORE);
+}
+function getSopladoWeightedScore(answers = {}, weights = {}) {
+  return Object.entries(weights).reduce((score, [id, weight]) => score + (answers[id] === "yes" ? weight : 0), 0);
+}
+function buildSopladoExportRows(records) {
+  return records.flatMap((record) => {
+    const form = record.form ?? {};
+    const collaborator = form.blowerName ?? "";
+    const assurer = form.assurerName ?? "";
+    const week = record.weekCode ?? getWeekCodeFromDate(record.finishedAt ?? record.createdAt ?? record.savedDate);
+    const rows = [
+      [1, "RENDIMIENTO", SOPLADO_RENDIMIENTO_SCORE, getSopladoRendimientoScore(form)],
+      [2, "REQUERIMIENTOS", SOPLADO_REQUIREMENTS_SCORE, getSopladoWeightedScore(form.requirements, SOPLADO_REQUIREMENT_WEIGHTS)],
+      [3, "CALIDAD", SOPLADO_QUALITY_SCORE, getSopladoWeightedScore(form.quality, SOPLADO_QUALITY_WEIGHTS)]
+    ];
+    return rows.map(([item, concept, expected, result]) => ({
+      scope: SOPLADO_LABOR + item,
+      week,
+      item,
+      concept,
+      collaborator,
+      expected,
+      result: roundScore(result),
+      percent: getPercent(result, expected),
+      assurer,
+      labor: SOPLADO_LABOR,
+      nonConformingStems: ""
+    }));
+  });
+}
+export function downloadSopladoRecordsExcel(records) {
+  downloadWorkbook({
+    worksheets: [{ name: "Aseguramiento Soplado", content: buildWorksheetXml(buildSopladoExportRows(records)) }],
+    fileName: "aseguramiento-soplado-" + getExportDateStamp() + ".xlsx"
+  });
+}
