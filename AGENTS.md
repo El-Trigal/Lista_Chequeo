@@ -37,6 +37,9 @@ scripts de `npm.ps1`.
 - `src/DirectMonitoringApp.jsx`: Aseguramiento de monitoreo directo.
 - `src/TswvChecklistApp.jsx`: Aseguramiento TSWV.
 - `src/AspiradoChecklistApp.jsx`: Aseguramiento de aspirado.
+- `src/SopladoChecklistApp.jsx`: Aseguramiento de soplado.
+- `src/RbRootingMonitoringApp.jsx`: Aseguramiento de monitoreo RB Bancos de enraizamiento.
+- `src/ColdRoomMonitoringApp.jsx`: Aseguramiento de monitoreo en Cuarto frio.
 - `src/styles.css`: estilos globales de todas las listas.
 - `src/RecordFilters.jsx`: filtros de registros.
 - `src/data/checklistConfig.js`: configuracion de aspersion.
@@ -95,6 +98,18 @@ Cuando se agregue una lista nueva con registros remotos, crear tambien:
 
 Los SQL no se ejecutan con el push; el usuario debe pegarlos en Supabase SQL
 Editor.
+
+Tablas actuales por lista:
+
+- `spray_checklist_records`: aplicacion de plaguicidas.
+- `rb_monitoring_records`: monitoreo roya blanca.
+- `direct_monitoring_records`: monitoreo directo.
+- `tswv_checklist_records`: TSWV.
+- `aspirado_checklist_records`: aspirado.
+- `soplado_checklist_records`: soplado.
+- `rb_rooting_records`: RB Bancos de enraizamiento.
+- `cold_room_monitoring_records`: monitoreo en Cuarto frio.
+
 
 ## Reglas de edicion
 
@@ -183,6 +198,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 - En modo edicion/visualizacion, conservar la ubicacion y estilo ya aceptados
   por el usuario, usando roya blanca como referencia cuando haya dudas.
 - Los campos numericos deben aceptar solo numeros decimales cuando aplique.
+- Usar etiquetas visibles `Monitor/a`, `Aspirador/a`, `Soplador/a` y `Asegurador/a` en formularios, filtros y registros.
 - Al editar un registro existente, conservar la fecha, hora y semana originales
   de creacion.
 
@@ -194,4 +210,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   contar como 100% y 20/20.
 - Monitoreo directo usa `src/data/farmPlan.js` para camas por nave.
 - Las exportaciones a Excel estan centralizadas en `src/lib/excelExport.js`.
+- Soplado mantiene una estructura simple: rendimiento, requerimientos y calidad.
+- RB Bancos de enraizamiento agrupa simulacros y reporte como `REQUERIMIENTOS` en Excel.
+- Cuarto frio agrupa conformidad de la labor y reporte como `REQUERIMIENTOS` en Excel.
+- En Cuarto frio, conformidad vale 15 puntos: 5 canastillas por 3 bolsas, cada bolsa cumplida vale 1 punto.
 
