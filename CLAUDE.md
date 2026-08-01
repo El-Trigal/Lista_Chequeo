@@ -130,6 +130,12 @@ existentes en vez de tocar la maquinaria del ZIP.
 Aqui tambien vive el calculo de codigo de semana (`getCurrentWeekCode` y
 variantes por tipo de registro), en formato `AASS` (ano corto + semana ISO).
 
+Agrupaciones ya acordadas con el usuario en las hojas generadas:
+
+- RB Bancos de enraizamiento: simulacros y reporte van bajo `REQUERIMIENTOS`.
+- Cuarto frio: conformidad de la labor y reporte van bajo `REQUERIMIENTOS`.
+- Soplado mantiene una estructura simple: rendimiento, requerimientos y calidad.
+
 ### Autenticacion y roles: `src/lib/auth.js`
 
 Tres usuarios fijos con email quemado en el codigo, autenticados contra Supabase
