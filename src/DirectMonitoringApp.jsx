@@ -10,13 +10,15 @@ import {
   DIRECT_MONITORING_ITEMS,
   DIRECT_MONITORING_TOTAL_SCORE
 } from "./data/directMonitoringConfig";
-import { FARM_BLOCKS, getFarmBeds, getFarmNaves } from "./data/farmPlan";
+import { getFarmBeds, getFarmBlocks, getFarmNaves, hasFarmPlan } from "./data/farmPlans";
 import {
   deleteDirectMonitoringRecord,
   loadDirectMonitoringRecords,
   saveDirectMonitoringRecord,
   updateDirectMonitoringRecord
 } from "./lib/directMonitoringRecords";
+import { getUserSede } from "./lib/auth";
+import { getSedeLabel } from "./data/sedes";
 import { formatNumber } from "./lib/checklistMath";
 import { downloadDirectMonitoringRecordsExcel, getCurrentWeekCode } from "./lib/excelExport";
 import { hasSupabaseConfig } from "./lib/supabase";
@@ -336,7 +338,7 @@ function RecordsLoadingState() {
   );
 }
 
-function DirectMonitoringRecords({ records, recordsSource, isLoading, permissions, onEditRecord }) {
+function DirectMonitoringRecords({ sede, records, recordsSource, isLoading, permissions, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
   const [draftFilters, setDraftFilters] = useState(createEmptyRecordFilters);
   const [appliedFilters, setAppliedFilters] = useState(createEmptyRecordFilters);
@@ -377,7 +379,7 @@ function DirectMonitoringRecords({ records, recordsSource, isLoading, permission
       return;
     }
 
-    downloadDirectMonitoringRecordsExcel(filteredRecords);
+    downloadDirectMonitoringRecordsExcel(sede, filteredRecords);
   }
 
   return (
@@ -542,7 +544,7 @@ function SiteComplianceToggle({ value, onChange, disabled = false }) {
   );
 }
 
-function DirectMonitoringBedsMatrix({ form, onChange, readOnly = false }) {
+function DirectMonitoringBedsMatrix({ sede, form, onChange, readOnly = false }) {
   const directBeds = getDirectMonitoringBeds(form);
 
   function updateBed(bedIndex, patch) {
@@ -570,11 +572,19 @@ function DirectMonitoringBedsMatrix({ form, onChange, readOnly = false }) {
     });
   }
 
+  if (!hasFarmPlan(sede)) {
+    return (
+      <p className="records-empty">
+        El plano de bloques, naves y camas todavia no esta configurado para esta sede.
+      </p>
+    );
+  }
+
   return (
     <div className="direct-monitoring-table">
       {directBeds.map((bed, bedIndex) => {
-        const naveOptions = getFarmNaves(bed.block);
-        const bedOptions = getFarmBeds(bed.block, bed.nave);
+        const naveOptions = getFarmNaves(sede, bed.block);
+        const bedOptions = getFarmBeds(sede, bed.block, bed.nave);
         const isBedComplete = isDirectMonitoringBedComplete(bed);
 
         return (
@@ -596,7 +606,7 @@ function DirectMonitoringBedsMatrix({ form, onChange, readOnly = false }) {
                   onChange={(event) => updateBed(bedIndex, { block: event.target.value })}
                 >
                   <option value="">Seleccionar bloque</option>
-                  {FARM_BLOCKS.map((block) => (
+                  {getFarmBlocks(sede).map((block) => (
                     <option key={block} value={block}>
                       {block}
                     </option>
@@ -664,6 +674,7 @@ function DirectMonitoringBedsMatrix({ form, onChange, readOnly = false }) {
 }
 
 function DirectMonitoringSection({
+  sede,
   item,
   index,
   form,
@@ -749,7 +760,7 @@ function DirectMonitoringSection({
           ) : null}
 
           {isRegistroMarcacion ? (
-            <DirectMonitoringBedsMatrix form={form} onChange={onChange} readOnly={readOnly} />
+            <DirectMonitoringBedsMatrix sede={sede} form={form} onChange={onChange} readOnly={readOnly} />
           ) : isRendimiento ? null : (
             <div className="item-table without-value monitoring-control-table">
               <div className="item-table-head">
@@ -840,6 +851,7 @@ function ChecklistStartScreen({ saveState, permissions, onCreate }) {
 }
 
 export default function DirectMonitoringApp({ currentUser, permissions, onHome, onLogout }) {
+  const sede = getUserSede(currentUser);
   const [view, setView] = useState(
     permissions.canCreateChecklists ? CHECKLIST_VIEW : RECORDS_VIEW
   );
@@ -869,7 +881,7 @@ export default function DirectMonitoringApp({ currentUser, permissions, onHome, 
     setIsRecordsLoading(true);
 
     try {
-      const loaded = await loadDirectMonitoringRecords();
+      const loaded = await loadDirectMonitoringRecords(sede);
       setRecords(loaded.records);
       setRecordsSource(loaded.sourceLabel);
     } finally {
@@ -1027,8 +1039,8 @@ export default function DirectMonitoringApp({ currentUser, permissions, onHome, 
     };
 
     const nextRecords = editingRecord
-      ? await updateDirectMonitoringRecord(record)
-      : await saveDirectMonitoringRecord(record);
+      ? await updateDirectMonitoringRecord(sede, record)
+      : await saveDirectMonitoringRecord(sede, record);
 
     const isPending = nextRecords.some((item) => item.id === record.id && item.syncStatus === "pending");
 
@@ -1054,7 +1066,7 @@ export default function DirectMonitoringApp({ currentUser, permissions, onHome, 
     if (!shouldDelete) return;
 
     try {
-      const nextRecords = await deleteDirectMonitoringRecord(editingRecord.id);
+      const nextRecords = await deleteDirectMonitoringRecord(sede, editingRecord.id);
       setRecords(nextRecords);
       setRecordsSource(getLocalSourceLabel(nextRecords));
       setSaveState({ type: "success-message", message: "Registro eliminado." });
@@ -1075,7 +1087,7 @@ export default function DirectMonitoringApp({ currentUser, permissions, onHome, 
         </div>
         <div className="header-actions">
           <span className="source-pill">{hasSupabaseConfig ? "Supabase activo" : "MVP local"}</span>
-          <span className="source-pill">{currentUser.label}</span>
+          <span className="source-pill">{currentUser.label}</span><span className="source-pill">{getSedeLabel(sede)}</span>
           <button type="button" className="ghost-action" onClick={onLogout}>
             Cerrar sesión
           </button>
@@ -1139,6 +1151,7 @@ export default function DirectMonitoringApp({ currentUser, permissions, onHome, 
 
             {DIRECT_MONITORING_ITEMS.map((item, index) => (
               <DirectMonitoringSection
+                sede={sede}
                 item={item}
                 index={index}
                 key={item.id}
@@ -1166,6 +1179,7 @@ export default function DirectMonitoringApp({ currentUser, permissions, onHome, 
         )
       ) : (
         <DirectMonitoringRecords
+          sede={sede}
           records={records}
           recordsSource={recordsSource}
           isLoading={isRecordsLoading}

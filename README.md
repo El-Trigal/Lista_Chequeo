@@ -56,13 +56,53 @@ Para cambiar el limite, ajusta `max_total_live_bytes` en `public.checklist_stora
 
 ### Usuarios
 
-La app usa Supabase Auth. Crea estos usuarios en `Authentication > Users`:
+La app usa Supabase Auth. La app opera 3 sedes con aislamiento total; cada
+usuario pertenece a una sola sede. Crea estos usuarios en `Authentication >
+Users` (los emails deben coincidir exactamente con `src/lib/auth.js`):
 
-- `jefemipe@trigal.com`: rol visual `jefe`
-- `operariomipe@trigal.com`: rol visual `operario`
-- `auxiliarpro@trigal.com`: rol visual `auxiliar`
+| Email | Rol visual | Sede |
+| --- | --- | --- |
+| `jefemipe@trigal.com` | `jefe` | sede1 |
+| `operariomipe@trigal.com` | `operario` | sede1 |
+| `auxiliarpro@trigal.com` | `auxiliar` | sede1 |
+| `jefesede2@trigal.com` | `jefe` | sede2 |
+| `operariosede2@trigal.com` | `operario` | sede2 |
+| `auxiliarsede2@trigal.com` | `auxiliar` | sede2 |
+| `jefesede3@trigal.com` | `jefe` | sede3 |
+| `operariosede3@trigal.com` | `operario` | sede3 |
+| `auxiliarsede3@trigal.com` | `auxiliar` | sede3 |
+
+Los usuarios de sede2 y sede3, y los nombres de sede (`Sede 1/2/3` en
+`src/data/sedes.js`), son placeholders. Si los nombres reales de las sedes o
+los emails van a ser distintos, avisar para actualizarlos ahi y en
+`supabase/multisede.sql`.
 
 Las contraseñas no se guardan en el repositorio; deben configurarse en Supabase.
+
+## Multisede — pendientes de activación
+
+El codigo de multisede ya esta en la rama (ver `CLAUDE.md`, seccion
+"Multisede"), pero para que funcione en producción falta, en este orden:
+
+1. **Crear en Supabase los 6 usuarios nuevos** (sede2 y sede3) listados arriba,
+   en `Authentication > Users`.
+2. **Pegar [`supabase/multisede.sql`](supabase/multisede.sql) en el SQL
+   Editor de Supabase.** Agrega la columna `sede` a las 8 tablas, la tabla
+   `checklist_users` (usuario → sede) con los 9 usuarios, la función
+   `current_sede()` y reescribe las policies para que cada sede solo vea sus
+   propios registros. Es idempotente, se puede volver a ejecutar sin romper
+   nada. El archivo trae al final las consultas para verificar que quedó bien.
+3. **Cargar los planos de bloques/naves/camas de sede2 y sede3.** Se necesita
+   el Excel del plano de cada sede (mismo formato que el que ya se uso para
+   `src/data/farmPlan.js`). Con eso se genera `src/data/farmPlanSede2.js` /
+   `farmPlanSede3.js` y se registran en `src/data/farmPlans.js`. Mientras no
+   esten cargados, monitoreo directo y TSWV muestran un aviso en vez de
+   selectores de cama para esas sedes.
+
+Sin el paso 2, el aislamiento entre sedes **no existe todavía**: las policies
+de Supabase siguen siendo `using (true)`, es decir cualquier usuario
+autenticado ve los registros de todas las sedes. La app funciona igual, pero
+sin la separación real hasta que ese SQL se ejecute.
 
 ## GitHub Pages
 

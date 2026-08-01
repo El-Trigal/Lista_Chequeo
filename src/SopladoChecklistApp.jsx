@@ -16,6 +16,8 @@ import {
   saveSopladoRecord,
   updateSopladoRecord
 } from "./lib/sopladoRecords";
+import { getUserSede } from "./lib/auth";
+import { getSedeLabel } from "./data/sedes";
 
 const CHECKLIST_VIEW = "checklist";
 const RECORDS_VIEW = "records";
@@ -301,7 +303,7 @@ function SopladoStartScreen({ saveState, permissions, onCreate }) {
   );
 }
 
-function SopladoRecords({ records, recordsSource, isLoading, permissions, onEditRecord }) {
+function SopladoRecords({ sede, records, recordsSource, isLoading, permissions, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
   const [draftFilters, setDraftFilters] = useState(createEmptyRecordFilters);
   const [appliedFilters, setAppliedFilters] = useState(createEmptyRecordFilters);
@@ -318,7 +320,7 @@ function SopladoRecords({ records, recordsSource, isLoading, permissions, onEdit
       window.alert("No hay registros para descargar con los filtros actuales.");
       return;
     }
-    downloadSopladoRecordsExcel(filteredRecords);
+    downloadSopladoRecordsExcel(sede, filteredRecords);
   }
 
   return (
@@ -353,6 +355,7 @@ function SopladoRecords({ records, recordsSource, isLoading, permissions, onEdit
 }
 
 export default function SopladoChecklistApp({ currentUser, permissions, onHome, onLogout }) {
+  const sede = getUserSede(currentUser);
   const [view, setView] = useState(permissions.canCreateChecklists ? CHECKLIST_VIEW : RECORDS_VIEW);
   const [isChecklistActive, setIsChecklistActive] = useState(false);
   const [form, setForm] = useState(createInitialForm);
@@ -368,7 +371,7 @@ export default function SopladoChecklistApp({ currentUser, permissions, onHome, 
   async function refreshRecords() {
     setIsRecordsLoading(true);
     try {
-      const loaded = await loadSopladoRecords();
+      const loaded = await loadSopladoRecords(sede);
       setRecords(loaded.records);
       setRecordsSource(loaded.sourceLabel);
     } finally {
@@ -450,7 +453,7 @@ export default function SopladoChecklistApp({ currentUser, permissions, onHome, 
       percent: result.percent,
       summary: { compliant: result.compliant, nonCompliant: result.nonCompliant }
     };
-    const nextRecords = editingRecord ? await updateSopladoRecord(record) : await saveSopladoRecord(record);
+    const nextRecords = editingRecord ? await updateSopladoRecord(sede, record) : await saveSopladoRecord(sede, record);
     const isPending = nextRecords.some((item) => item.id === record.id && item.syncStatus === "pending");
     setRecords(nextRecords);
     setRecordsSource(getLocalSourceLabel(nextRecords));
@@ -464,7 +467,7 @@ export default function SopladoChecklistApp({ currentUser, permissions, onHome, 
     const shouldDelete = window.confirm("¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.");
     if (!shouldDelete) return;
     try {
-      const nextRecords = await deleteSopladoRecord(editingRecord.id);
+      const nextRecords = await deleteSopladoRecord(sede, editingRecord.id);
       setRecords(nextRecords);
       setRecordsSource(getLocalSourceLabel(nextRecords));
       setSaveState({ type: "success-message", message: "Registro eliminado." });
@@ -482,7 +485,7 @@ export default function SopladoChecklistApp({ currentUser, permissions, onHome, 
         <div><p className="eyebrow">Flores El Trigal</p><h1>Aseguramiento de Soplado</h1></div>
         <div className="header-actions">
           <span className="source-pill">{recordsSource}</span>
-          <span className="source-pill">{currentUser.label}</span>
+          <span className="source-pill">{currentUser.label}</span><span className="source-pill">{getSedeLabel(sede)}</span>
           <button type="button" className="ghost-action" onClick={onLogout}>Cerrar sesión</button>
           <button type="button" className="ghost-action" onClick={returnHome}>Inicio</button>
           <button type="button" className={view === CHECKLIST_VIEW ? "tab-button active" : "tab-button"} onClick={() => setView(CHECKLIST_VIEW)}>Chequeo</button>
@@ -513,7 +516,7 @@ export default function SopladoChecklistApp({ currentUser, permissions, onHome, 
           <SummaryTable result={result} observations={form.observations} onSave={handleSaveRecord} canSave={permissions.canEditRecords} />
         </>
       ) : <SopladoStartScreen saveState={saveState} permissions={permissions} onCreate={startChecklist} />) : (
-        <SopladoRecords records={records} recordsSource={recordsSource} isLoading={isRecordsLoading} permissions={permissions} onEditRecord={editRecord} />
+        <SopladoRecords sede={sede} records={records} recordsSource={recordsSource} isLoading={isRecordsLoading} permissions={permissions} onEditRecord={editRecord} />
       )}
     </main>
   );

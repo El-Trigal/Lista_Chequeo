@@ -20,6 +20,8 @@ import {
   saveRbMonitoringRecord,
   updateRbMonitoringRecord
 } from "./lib/rbMonitoringRecords";
+import { getUserSede } from "./lib/auth";
+import { getSedeLabel } from "./data/sedes";
 import { formatNumber } from "./lib/checklistMath";
 import {
   downloadRbRecordsExcel,
@@ -272,7 +274,7 @@ function RecordsLoadingState() {
   );
 }
 
-function RbMonitoringRecords({ records, recordsSource, isLoading, permissions, onEditRecord }) {
+function RbMonitoringRecords({ sede, records, recordsSource, isLoading, permissions, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
   const [draftFilters, setDraftFilters] = useState(createEmptyRecordFilters);
   const [appliedFilters, setAppliedFilters] = useState(createEmptyRecordFilters);
@@ -313,7 +315,7 @@ function RbMonitoringRecords({ records, recordsSource, isLoading, permissions, o
       return;
     }
 
-    downloadRbRecordsExcel(filteredRecords);
+    downloadRbRecordsExcel(sede, filteredRecords);
   }
 
   return (
@@ -759,6 +761,7 @@ function ControlQualitySection({ form, expanded, onToggle, onChange, score, read
 }
 
 export default function RbMonitoringApp({ currentUser, permissions, onHome, onLogout }) {
+  const sede = getUserSede(currentUser);
   const [view, setView] = useState(
     permissions.canCreateChecklists ? CHECKLIST_VIEW : RECORDS_VIEW
   );
@@ -782,7 +785,7 @@ export default function RbMonitoringApp({ currentUser, permissions, onHome, onLo
     setIsRecordsLoading(true);
 
     try {
-      const loaded = await loadRbMonitoringRecords();
+      const loaded = await loadRbMonitoringRecords(sede);
       setRecords(loaded.records.map(normalizeRbMonitoringRecord));
       setRecordsSource(loaded.sourceLabel);
     } finally {
@@ -935,8 +938,8 @@ export default function RbMonitoringApp({ currentUser, permissions, onHome, onLo
     };
 
     const nextRecords = editingRecord
-      ? await updateRbMonitoringRecord(record)
-      : await saveRbMonitoringRecord(record);
+      ? await updateRbMonitoringRecord(sede, record)
+      : await saveRbMonitoringRecord(sede, record);
     const isPending = nextRecords.some((item) => item.id === record.id && item.syncStatus === "pending");
 
     setRecords(nextRecords);
@@ -961,7 +964,7 @@ export default function RbMonitoringApp({ currentUser, permissions, onHome, onLo
     if (!shouldDelete) return;
 
     try {
-      const nextRecords = await deleteRbMonitoringRecord(editingRecord.id);
+      const nextRecords = await deleteRbMonitoringRecord(sede, editingRecord.id);
       setRecords(nextRecords);
       setRecordsSource(getLocalSourceLabel(nextRecords));
       setSaveState({ type: "success-message", message: "Registro eliminado." });
@@ -982,7 +985,7 @@ export default function RbMonitoringApp({ currentUser, permissions, onHome, onLo
         </div>
         <div className="header-actions">
           <span className="source-pill">{hasSupabaseConfig ? "Supabase activo" : "MVP local"}</span>
-          <span className="source-pill">{currentUser.label}</span>
+          <span className="source-pill">{currentUser.label}</span><span className="source-pill">{getSedeLabel(sede)}</span>
           <button type="button" className="ghost-action" onClick={onLogout}>
             Cerrar sesión
           </button>
@@ -1139,6 +1142,7 @@ export default function RbMonitoringApp({ currentUser, permissions, onHome, onLo
         )
       ) : (
         <RbMonitoringRecords
+          sede={sede}
           records={records}
           recordsSource={recordsSource}
           isLoading={isRecordsLoading}

@@ -938,6 +938,17 @@ function downloadWorkbook({ worksheets, fileName }) {
   URL.revokeObjectURL(url);
 }
 
+function getSedeFilePrefix(sede) {
+  const normalized = String(sede ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+  return normalized ? `${normalized}-` : "";
+}
+
 function getExportDateStamp() {
   const date = new Date();
   const year = date.getFullYear();
@@ -947,7 +958,7 @@ function getExportDateStamp() {
   return `${year}-${month}-${day}`;
 }
 
-export function downloadSprayRecordsExcel(records) {
+export function downloadSprayRecordsExcel(sede, records) {
   downloadWorkbook({
     worksheets: [
       {
@@ -955,11 +966,11 @@ export function downloadSprayRecordsExcel(records) {
         content: buildWorksheetXml(buildSprayExportRows(records))
       }
     ],
-    fileName: `listado-chequeo-aplicacion-${getExportDateStamp()}.xlsx`
+    fileName: `${getSedeFilePrefix(sede)}listado-chequeo-aplicacion-${getExportDateStamp()}.xlsx`
   });
 }
 
-export function downloadRbRecordsExcel(records) {
+export function downloadRbRecordsExcel(sede, records) {
   downloadWorkbook({
     worksheets: [
       {
@@ -975,22 +986,22 @@ export function downloadRbRecordsExcel(records) {
         content: buildRbSimulacrosWeeklyWorksheetXml(buildRbSimulacrosWeeklyRows(records))
       }
     ],
-    fileName: `monitoreo-roya-blanca-${getExportDateStamp()}.xlsx`
+    fileName: `${getSedeFilePrefix(sede)}monitoreo-roya-blanca-${getExportDateStamp()}.xlsx`
   });
 }
 
 
-export function downloadRbRootingRecordsExcel(records) {
+export function downloadRbRootingRecordsExcel(sede, records) {
   downloadWorkbook({
     worksheets: [{ name: "RB bancos enraizamiento", content: buildWorksheetXml(buildRbRootingExportRows(records)) }],
-    fileName: "rb-bancos-enraizamiento-" + getExportDateStamp() + ".xlsx"
+    fileName: getSedeFilePrefix(sede) + "rb-bancos-enraizamiento-" + getExportDateStamp() + ".xlsx"
   });
 }
 
-export function downloadColdRoomRecordsExcel(records) {
+export function downloadColdRoomRecordsExcel(sede, records) {
   downloadWorkbook({
     worksheets: [{ name: "Monitoreo cuarto frio", content: buildWorksheetXml(buildColdRoomExportRows(records)) }],
-    fileName: "monitoreo-cuarto-frio-" + getExportDateStamp() + ".xlsx"
+    fileName: getSedeFilePrefix(sede) + "monitoreo-cuarto-frio-" + getExportDateStamp() + ".xlsx"
   });
 }
 
@@ -1052,7 +1063,7 @@ function buildDirectExportRows(records) {
   });
 }
 
-export function downloadDirectMonitoringRecordsExcel(records) {
+export function downloadDirectMonitoringRecordsExcel(sede, records) {
   downloadWorkbook({
     worksheets: [
       {
@@ -1060,7 +1071,7 @@ export function downloadDirectMonitoringRecordsExcel(records) {
         content: buildWorksheetXml(buildDirectExportRows(records))
       }
     ],
-    fileName: "monitoreo-directo-" + getExportDateStamp() + ".xlsx"
+    fileName: getSedeFilePrefix(sede) + "monitoreo-directo-" + getExportDateStamp() + ".xlsx"
   });
 }
 
@@ -1128,10 +1139,10 @@ function buildTswvExportRows(records) {
   });
 }
 
-export function downloadTswvRecordsExcel(records) {
+export function downloadTswvRecordsExcel(sede, records) {
   downloadWorkbook({
     worksheets: [{ name: "Aseguramiento TSWV", content: buildWorksheetXml(buildTswvExportRows(records)) }],
-    fileName: "aseguramiento-tswv-" + getExportDateStamp() + ".xlsx"
+    fileName: getSedeFilePrefix(sede) + "aseguramiento-tswv-" + getExportDateStamp() + ".xlsx"
   });
 }
 
@@ -1189,10 +1200,10 @@ function buildAspiradoExportRows(records) {
     }));
   });
 }
-export function downloadAspiradoRecordsExcel(records) {
+export function downloadAspiradoRecordsExcel(sede, records) {
   downloadWorkbook({
     worksheets: [{ name: "Aseguramiento Aspirado", content: buildWorksheetXml(buildAspiradoExportRows(records)) }],
-    fileName: "aseguramiento-aspirado-" + getExportDateStamp() + ".xlsx"
+    fileName: getSedeFilePrefix(sede) + "aseguramiento-aspirado-" + getExportDateStamp() + ".xlsx"
   });
 }
 
@@ -1247,9 +1258,9 @@ function buildSopladoExportRows(records) {
     }));
   });
 }
-export function downloadSopladoRecordsExcel(records) {
+export function downloadSopladoRecordsExcel(sede, records) {
   downloadWorkbook({
     worksheets: [{ name: "Aseguramiento Soplado", content: buildWorksheetXml(buildSopladoExportRows(records)) }],
-    fileName: "aseguramiento-soplado-" + getExportDateStamp() + ".xlsx"
+    fileName: getSedeFilePrefix(sede) + "aseguramiento-soplado-" + getExportDateStamp() + ".xlsx"
   });
 }
