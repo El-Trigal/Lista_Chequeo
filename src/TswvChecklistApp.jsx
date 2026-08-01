@@ -6,7 +6,7 @@ import {
   matchesRecordFilters,
   toggleRecordFilterValue
 } from "./RecordFilters";
-import { FARM_BLOCKS, getFarmBeds, getFarmNaves } from "./data/farmPlan";
+import { getFarmBeds, getFarmBlocks, getFarmNaves, hasFarmPlan } from "./data/farmPlans";
 import { formatNumber } from "./lib/checklistMath";
 import { downloadTswvRecordsExcel, getCurrentWeekCode } from "./lib/excelExport";
 import { sanitizeDecimalInput } from "./lib/inputFormat";
@@ -17,6 +17,8 @@ import {
   saveTswvRecord,
   updateTswvRecord
 } from "./lib/tswvRecords";
+import { getUserSede } from "./lib/auth";
+import { getSedeLabel } from "./data/sedes";
 
 const CHECKLIST_VIEW = "checklist";
 const RECORDS_VIEW = "records";
@@ -432,7 +434,7 @@ function TswvControlsSection({ form, expanded, onToggle, onAnswerChange, readOnl
   );
 }
 
-function TswvErradicationsSection({ form, expanded, onToggle, onChange, readOnly }) {
+function TswvErradicationsSection({ sede, form, expanded, onToggle, onChange, readOnly }) {
   const complete = isErradicationsComplete(form.erradications);
   const score = calculateErradicationScore(form.erradications);
 
@@ -465,10 +467,15 @@ function TswvErradicationsSection({ form, expanded, onToggle, onChange, readOnly
       />
       {expanded ? (
         <div className="collapsible-content">
+          {hasFarmPlan(sede) ? null : (
+            <p className="records-empty">
+              El plano de bloques, naves y camas todavia no esta configurado para esta sede.
+            </p>
+          )}
           <div className="direct-monitoring-table tswv-erradications-grid">
             {form.erradications.map((item, index) => {
-              const naveOptions = getFarmNaves(item.block);
-              const bedOptions = getFarmBeds(item.block, item.nave);
+              const naveOptions = getFarmNaves(sede, item.block);
+              const bedOptions = getFarmBeds(sede, item.block, item.nave);
               const isComplete = isErradicationComplete(item);
 
               return (
@@ -482,7 +489,7 @@ function TswvErradicationsSection({ form, expanded, onToggle, onChange, readOnly
                       <span>Bloque</span>
                       <select value={item.block} disabled={readOnly} onChange={(event) => updateErradication(index, { block: event.target.value })}>
                         <option value="">Seleccionar</option>
-                        {FARM_BLOCKS.map((block) => <option key={block} value={block}>{block}</option>)}
+                        {getFarmBlocks(sede).map((block) => <option key={block} value={block}>{block}</option>)}
                       </select>
                     </label>
                     <label>
@@ -557,7 +564,7 @@ function TswvStartScreen({ saveState, permissions, onCreate }) {
   );
 }
 
-function TswvRecords({ records, recordsSource, isLoading, permissions, onEditRecord }) {
+function TswvRecords({ sede, records, recordsSource, isLoading, permissions, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
   const [draftFilters, setDraftFilters] = useState(createEmptyRecordFilters);
   const [appliedFilters, setAppliedFilters] = useState(createEmptyRecordFilters);
@@ -596,7 +603,7 @@ function TswvRecords({ records, recordsSource, isLoading, permissions, onEditRec
       return;
     }
 
-    downloadTswvRecordsExcel(filteredRecords);
+    downloadTswvRecordsExcel(sede, filteredRecords);
   }
 
   return (
@@ -661,6 +668,7 @@ function TswvRecords({ records, recordsSource, isLoading, permissions, onEditRec
 }
 
 export default function TswvChecklistApp({ currentUser, permissions, onHome, onLogout }) {
+  const sede = getUserSede(currentUser);
   const [view, setView] = useState(
     permissions.canCreateChecklists ? CHECKLIST_VIEW : RECORDS_VIEW
   );
@@ -682,7 +690,7 @@ export default function TswvChecklistApp({ currentUser, permissions, onHome, onL
     setIsRecordsLoading(true);
 
     try {
-      const loaded = await loadTswvRecords();
+      const loaded = await loadTswvRecords(sede);
       setRecords(loaded.records);
       setRecordsSource(loaded.sourceLabel);
     } finally {
@@ -825,8 +833,8 @@ export default function TswvChecklistApp({ currentUser, permissions, onHome, onL
     };
 
     const nextRecords = editingRecord
-      ? await updateTswvRecord(record)
-      : await saveTswvRecord(record);
+      ? await updateTswvRecord(sede, record)
+      : await saveTswvRecord(sede, record);
     const isPending = nextRecords.some((item) => item.id === record.id && item.syncStatus === "pending");
 
     setRecords(nextRecords);
@@ -851,7 +859,7 @@ export default function TswvChecklistApp({ currentUser, permissions, onHome, onL
     if (!shouldDelete) return;
 
     try {
-      const nextRecords = await deleteTswvRecord(editingRecord.id);
+      const nextRecords = await deleteTswvRecord(sede, editingRecord.id);
       setRecords(nextRecords);
       setRecordsSource(getLocalSourceLabel(nextRecords));
       setSaveState({ type: "success-message", message: "Registro eliminado." });
@@ -872,7 +880,7 @@ export default function TswvChecklistApp({ currentUser, permissions, onHome, onL
         </div>
         <div className="header-actions">
           <span className="source-pill">{hasSupabaseConfig ? "Supabase activo" : "MVP local"}</span>
-          <span className="source-pill">{currentUser.label}</span>
+          <span className="source-pill">{currentUser.label}</span><span className="source-pill">{getSedeLabel(sede)}</span>
           <button type="button" className="ghost-action" onClick={onLogout}>Cerrar sesión</button>
           <button type="button" className="ghost-action" onClick={returnHome}>Inicio</button>
           <button type="button" className={view === CHECKLIST_VIEW ? "tab-button active" : "tab-button"} onClick={() => setView(CHECKLIST_VIEW)}>Chequeo</button>
@@ -913,6 +921,7 @@ export default function TswvChecklistApp({ currentUser, permissions, onHome, onL
               readOnly={!permissions.canEditRecords}
             />
             <TswvErradicationsSection
+              sede={sede}
               form={form}
               expanded={expandedSections.erradicaciones}
               onToggle={() => toggleSection("erradicaciones")}
@@ -946,6 +955,7 @@ export default function TswvChecklistApp({ currentUser, permissions, onHome, onL
         )
       ) : (
         <TswvRecords
+          sede={sede}
           records={records}
           recordsSource={recordsSource}
           isLoading={isRecordsLoading}

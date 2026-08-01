@@ -13,6 +13,7 @@ import {
   matchesRecordFilters,
   toggleRecordFilterValue
 } from "./RecordFilters";
+import { getSedeLabel } from "./data/sedes";
 import { CHECKLIST_SECTIONS } from "./data/checklistConfig";
 import {
   buildInitialAnswers,
@@ -28,6 +29,7 @@ import {
   authenticateUser,
   clearSessionUser,
   getPermissions,
+  getUserSede,
   loadSessionUser
 } from "./lib/auth";
 import {
@@ -623,7 +625,7 @@ function RecordsLoadingState() {
   );
 }
 
-function RecordsView({ records, recordsSource, isLoading, permissions, onEditRecord }) {
+function RecordsView({ sede, records, recordsSource, isLoading, permissions, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
   const [draftFilters, setDraftFilters] = useState(createEmptyRecordFilters);
   const [appliedFilters, setAppliedFilters] = useState(createEmptyRecordFilters);
@@ -668,7 +670,7 @@ function RecordsView({ records, recordsSource, isLoading, permissions, onEditRec
       return;
     }
 
-    downloadSprayRecordsExcel(filteredRecords);
+    downloadSprayRecordsExcel(sede, filteredRecords);
   }
 
   return (
@@ -838,7 +840,7 @@ function HomeScreen({
         <div>
           <p className="eyebrow">Flores El Trigal</p>
           <h1>Listas de chequeo</h1>
-          <p className="session-text">Sesión: {currentUser.label}</p>
+          <p className="session-text">Sesión: {currentUser.label} · {getSedeLabel(getUserSede(currentUser))}</p>
         </div>
         <button type="button" className="ghost-action logout-action" onClick={onLogout}>
           Cerrar sesión
@@ -926,6 +928,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const permissions = getPermissions(currentUser);
+  const sede = getUserSede(currentUser);
   const [activeModule, setActiveModule] = useState(null);
   const [view, setView] = useState(CHECKLIST_VIEW);
   const [isChecklistActive, setIsChecklistActive] = useState(false);
@@ -971,7 +974,7 @@ function App() {
     setIsRecordsLoading(true);
 
     try {
-      const loaded = await loadRecords();
+      const loaded = await loadRecords(sede);
       setRecords(loaded.records);
       setRecordsSource(loaded.sourceLabel);
     } finally {
@@ -1186,8 +1189,8 @@ function App() {
     };
 
     const nextRecords = editingRecord
-      ? await updateRecord(record)
-      : await saveRecord(record);
+      ? await updateRecord(sede, record)
+      : await saveRecord(sede, record);
     const isPending = nextRecords.some((item) => item.id === record.id && item.syncStatus === "pending");
 
     setRecords(nextRecords);
@@ -1212,7 +1215,7 @@ function App() {
     if (!shouldDelete) return;
 
     try {
-      const nextRecords = await deleteRecord(editingRecord.id);
+      const nextRecords = await deleteRecord(sede, editingRecord.id);
       setRecords(nextRecords);
       setRecordsSource(getLocalSourceLabel(nextRecords));
       setSaveState({ type: "success-message", message: "Registro eliminado." });
@@ -1360,7 +1363,7 @@ function App() {
         </div>
         <div className="header-actions">
           <span className="source-pill">{hasSupabaseConfig ? "Supabase activo" : "MVP local"}</span>
-          <span className="source-pill">{currentUser.label}</span>
+          <span className="source-pill">{currentUser.label}</span><span className="source-pill">{getSedeLabel(sede)}</span>
           <button type="button" className="ghost-action" onClick={returnHome}>
             Inicio
           </button>
@@ -1465,6 +1468,7 @@ function App() {
         )
       ) : (
         <RecordsView
+          sede={sede}
           records={records}
           recordsSource={recordsSource}
           isLoading={isRecordsLoading}

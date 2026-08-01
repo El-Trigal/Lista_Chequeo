@@ -16,6 +16,8 @@ import {
   saveColdRoomRecord,
   updateColdRoomRecord
 } from "./lib/coldRoomRecords";
+import { getUserSede } from "./lib/auth";
+import { getSedeLabel } from "./data/sedes";
 
 const CHECKLIST_VIEW = "checklist";
 const RECORDS_VIEW = "records";
@@ -389,7 +391,7 @@ function ColdRoomStartScreen({ saveState, permissions, onCreate }) {
   );
 }
 
-function ColdRoomRecords({ records, recordsSource, isLoading, permissions, onEditRecord }) {
+function ColdRoomRecords({ sede, records, recordsSource, isLoading, permissions, onEditRecord }) {
   const [expandedRecordId, setExpandedRecordId] = useState(null);
   const [draftFilters, setDraftFilters] = useState(createEmptyRecordFilters);
   const [appliedFilters, setAppliedFilters] = useState(createEmptyRecordFilters);
@@ -427,7 +429,7 @@ function ColdRoomRecords({ records, recordsSource, isLoading, permissions, onEdi
       window.alert("No hay registros para descargar con los filtros actuales.");
       return;
     }
-    downloadColdRoomRecordsExcel(filteredRecords);
+    downloadColdRoomRecordsExcel(sede, filteredRecords);
   }
 
   return (
@@ -720,6 +722,7 @@ function QualitySection({ form, expanded, onToggle, onChange, score, readOnly })
 }
 
 export default function ColdRoomMonitoringApp({ currentUser, permissions, onHome, onLogout }) {
+  const sede = getUserSede(currentUser);
   const [view, setView] = useState(permissions.canCreateChecklists ? CHECKLIST_VIEW : RECORDS_VIEW);
   const [isChecklistActive, setIsChecklistActive] = useState(false);
   const [form, setForm] = useState(createInitialForm);
@@ -739,7 +742,7 @@ export default function ColdRoomMonitoringApp({ currentUser, permissions, onHome
   async function refreshRecords() {
     setIsRecordsLoading(true);
     try {
-      const loaded = await loadColdRoomRecords();
+      const loaded = await loadColdRoomRecords(sede);
       setRecords(loaded.records.map(normalizeColdRoomRecord));
       setRecordsSource(loaded.sourceLabel);
     } finally {
@@ -851,8 +854,8 @@ export default function ColdRoomMonitoringApp({ currentUser, permissions, onHome
       }
     };
     const nextRecords = editingRecord
-      ? await updateColdRoomRecord(record)
-      : await saveColdRoomRecord(record);
+      ? await updateColdRoomRecord(sede, record)
+      : await saveColdRoomRecord(sede, record);
     const isPending = nextRecords.some((item) => item.id === record.id && item.syncStatus === "pending");
     setRecords(nextRecords);
     setRecordsSource(getLocalSourceLabel(nextRecords));
@@ -872,7 +875,7 @@ export default function ColdRoomMonitoringApp({ currentUser, permissions, onHome
     const shouldDelete = window.confirm("¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.");
     if (!shouldDelete) return;
     try {
-      const nextRecords = await deleteColdRoomRecord(editingRecord.id);
+      const nextRecords = await deleteColdRoomRecord(sede, editingRecord.id);
       setRecords(nextRecords);
       setRecordsSource(getLocalSourceLabel(nextRecords));
       setSaveState({ type: "success-message", message: "Registro eliminado." });
@@ -893,7 +896,7 @@ export default function ColdRoomMonitoringApp({ currentUser, permissions, onHome
         </div>
         <div className="header-actions">
           <span className="source-pill">{hasSupabaseConfig ? "Supabase activo" : "MVP local"}</span>
-          <span className="source-pill">{currentUser.label}</span>
+          <span className="source-pill">{currentUser.label}</span><span className="source-pill">{getSedeLabel(sede)}</span>
           <button type="button" className="ghost-action" onClick={onLogout}>Cerrar sesión</button>
           <button type="button" className="ghost-action" onClick={returnHome}>Inicio</button>
           <button type="button" className={view === CHECKLIST_VIEW ? "tab-button active" : "tab-button"} onClick={() => setView(CHECKLIST_VIEW)}>Chequeo</button>
@@ -940,6 +943,7 @@ export default function ColdRoomMonitoringApp({ currentUser, permissions, onHome
         )
       ) : (
         <ColdRoomRecords
+          sede={sede}
           records={records}
           recordsSource={recordsSource}
           isLoading={isRecordsLoading}

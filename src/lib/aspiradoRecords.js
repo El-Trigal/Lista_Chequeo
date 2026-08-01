@@ -1,12 +1,13 @@
 import { hasSupabaseConfig, supabase } from "./supabase";
+import { DEFAULT_SEDE_ID } from "../data/sedes";
 
 const LOCAL_STORAGE_KEY = "aspirado-checklist-records";
 const TABLE_NAME = "aspirado_checklist_records";
 const SYNC_PENDING = "pending";
 const SYNC_SYNCED = "synced";
 
-function readLocalRecords() {
-  const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+function readLocalRecords(sede) {
+  const stored = readStoredValue(sede);
 
   if (!stored) {
     return [];
@@ -25,8 +26,32 @@ function readLocalRecords() {
   }
 }
 
-function writeLocalRecords(records) {
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(records));
+function getStorageKey(sede) {
+  return `${LOCAL_STORAGE_KEY}::${sede}`;
+}
+
+// Los registros guardados antes de multisede vivian en la clave sin sufijo.
+// La primera vez que la sede por defecto lee su clave nueva, se migran.
+function readStoredValue(sede) {
+  const stored = localStorage.getItem(getStorageKey(sede));
+
+  if (stored !== null || sede !== DEFAULT_SEDE_ID) {
+    return stored;
+  }
+
+  const legacyStored = localStorage.getItem(LOCAL_STORAGE_KEY);
+
+  if (legacyStored === null) {
+    return null;
+  }
+
+  localStorage.setItem(getStorageKey(sede), legacyStored);
+  localStorage.removeItem(LOCAL_STORAGE_KEY);
+  return legacyStored;
+}
+
+function writeLocalRecords(sede, records) {
+  localStorage.setItem(getStorageKey(sede), JSON.stringify(records));
 }
 
 function getRecordTimestamp(record) {
@@ -51,6 +76,7 @@ function markRecordPending(record) {
 
 function mapSupabaseRecord(row) {
   return {
+    sede: row.sede,
     id: row.id,
     createdAt: row.created_at,
     finishedAt: row.finished_at,
@@ -66,8 +92,9 @@ function mapSupabaseRecord(row) {
   };
 }
 
-function toSupabaseRow(record) {
+function toSupabaseRow(sede, record) {
   return {
+    sede,
     id: record.id,
     created_at: record.createdAt,
     finished_at: record.finishedAt,
@@ -110,12 +137,12 @@ function getSourceLabel(source, records) {
   return `${source} (${pendingCount} pendiente${pendingCount === 1 ? "" : "s"})`;
 }
 
-async function pushRecordToSupabase(record) {
+async function pushRecordToSupabase(sede, record) {
   if (!hasSupabaseConfig || !supabase) {
     return false;
   }
 
-  const { error } = await supabase.from(TABLE_NAME).upsert(toSupabaseRow(record));
+  const { error } = await supabase.from(TABLE_NAME).upsert(toSupabaseRow(sede, record));
 
   if (error) {
     throw error;
@@ -124,8 +151,8 @@ async function pushRecordToSupabase(record) {
   return true;
 }
 
-export async function syncAspiradoRecords() {
-  const localRecords = readLocalRecords();
+export async function syncAspiradoRecords(sede) {
+  const localRecords = readLocalRecords(sede);
 
   if (!hasSupabaseConfig || !supabase) {
     return localRecords;
@@ -141,7 +168,7 @@ export async function syncAspiradoRecords() {
     }
 
     try {
-      await pushRecordToSupabase(record);
+      await pushRecordToSupabase(sede, record);
       syncedRecords.push(markRecordSynced(record));
       changed = true;
     } catch {
@@ -150,27 +177,28 @@ export async function syncAspiradoRecords() {
   }
 
   if (changed) {
-    writeLocalRecords(syncedRecords);
+    writeLocalRecords(sede, syncedRecords);
   }
 
   return syncedRecords;
 }
 
-export async function loadAspiradoRecords() {
-  const localRecords = await syncAspiradoRecords();
+export async function loadAspiradoRecords(sede) {
+  const localRecords = await syncAspiradoRecords(sede);
 
   if (hasSupabaseConfig && supabase) {
     try {
       const { data, error } = await supabase
         .from(TABLE_NAME)
         .select("*")
+        .eq("sede", sede)
         .order("created_at", { ascending: false })
         .limit(100);
 
       if (!error && data) {
         const remoteRecords = data.map(mapSupabaseRecord);
         const mergedRecords = mergeRecords(localRecords, remoteRecords);
-        writeLocalRecords(mergedRecords);
+        writeLocalRecords(sede, mergedRecords);
 
         return {
           records: mergedRecords,
@@ -188,16 +216,16 @@ export async function loadAspiradoRecords() {
   };
 }
 
-export async function saveAspiradoRecord(record) {
-  let localRecords = [markRecordPending(record), ...readLocalRecords()].slice(0, 100);
-  writeLocalRecords(localRecords);
+export async function saveAspiradoRecord(sede, record) {
+  let localRecords = [markRecordPending(record), ...readLocalRecords(sede)].slice(0, 100);
+  writeLocalRecords(sede, localRecords);
 
   try {
-    await pushRecordToSupabase(record);
+    await pushRecordToSupabase(sede, record);
     localRecords = localRecords.map((item) =>
       item.id === record.id ? markRecordSynced(item) : item
     );
-    writeLocalRecords(localRecords);
+    writeLocalRecords(sede, localRecords);
   } catch {
     // Local save remains pending until Supabase is reachable.
   }
@@ -205,21 +233,21 @@ export async function saveAspiradoRecord(record) {
   return localRecords;
 }
 
-export async function updateAspiradoRecord(record) {
-  const existingRecords = readLocalRecords();
+export async function updateAspiradoRecord(sede, record) {
+  const existingRecords = readLocalRecords(sede);
   const nextRecords = existingRecords.some((item) => item.id === record.id)
     ? existingRecords.map((item) => (item.id === record.id ? markRecordPending(record) : item))
     : [markRecordPending(record), ...existingRecords];
 
   let localRecords = nextRecords.slice(0, 100);
-  writeLocalRecords(localRecords);
+  writeLocalRecords(sede, localRecords);
 
   try {
-    await pushRecordToSupabase(record);
+    await pushRecordToSupabase(sede, record);
     localRecords = localRecords.map((item) =>
       item.id === record.id ? markRecordSynced(item) : item
     );
-    writeLocalRecords(localRecords);
+    writeLocalRecords(sede, localRecords);
   } catch {
     // Local edits remain pending until Supabase is reachable.
   }
@@ -227,11 +255,11 @@ export async function updateAspiradoRecord(record) {
   return localRecords;
 }
 
-export async function deleteAspiradoRecord(recordId) {
-  const existingRecords = readLocalRecords();
+export async function deleteAspiradoRecord(sede, recordId) {
+  const existingRecords = readLocalRecords(sede);
 
   if (hasSupabaseConfig && supabase) {
-    const { error } = await supabase.from(TABLE_NAME).delete().eq("id", recordId);
+    const { error } = await supabase.from(TABLE_NAME).delete().eq("id", recordId).eq("sede", sede);
 
     if (error) {
       throw error;
@@ -239,7 +267,7 @@ export async function deleteAspiradoRecord(recordId) {
   }
 
   const nextRecords = existingRecords.filter((record) => record.id !== recordId);
-  writeLocalRecords(nextRecords);
+  writeLocalRecords(sede, nextRecords);
   return nextRecords;
 }
 

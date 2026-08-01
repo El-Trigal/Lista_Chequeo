@@ -68,8 +68,9 @@ estructura** — al agregar una lista nueva se copia uno existente y se cambian
 `LOCAL_STORAGE_KEY`, `TABLE_NAME` y los mapeos `toSupabaseRow` /
 `mapSupabaseRecord`.
 
-API exportada por cada uno: `sync*Records()`, `load*Records()`,
-`save*Record()`, `update*Record()`, `delete*Record()`.
+API exportada por cada uno: `sync*Records(sede)`, `load*Records(sede)`,
+`save*Record(sede, record)`, `update*Record(sede, record)`,
+`delete*Record(sede, recordId)`. **La sede siempre va primero.**
 
 Contrato de comportamiento que hay que preservar:
 
@@ -79,8 +80,11 @@ Contrato de comportamiento que hay que preservar:
    usuarios) con los locales.
 4. Los registros que no se pudieron subir quedan con `syncStatus: "pending"` y
    se reintentan en la siguiente sincronizacion.
+5. Toda lectura y escritura queda acotada a la sede: la clave local lleva
+   sufijo `::<sede>` y las consultas remotas filtran por `.eq("sede", sede)`.
 
-Mapa de claves locales a tablas:
+Mapa de claves locales a tablas (la clave real lleva sufijo `::<sede>`,
+p. ej. `spray-checklist-records::sede1`):
 
 | localStorage | tabla Supabase |
 | --- | --- |
@@ -96,13 +100,38 @@ Mapa de claves locales a tablas:
 `src/lib/records.js` filtra ademas por `RECORDS_RESET_AT`: los registros
 anteriores a esa fecha se descartan al leer. No cambiar sin pedirlo el usuario.
 
+Los registros guardados antes de multisede vivian en la clave sin sufijo; la
+primera lectura de la sede por defecto los migra a la clave nueva.
+
+### Multisede
+
+La app opera 3 sedes con **aislamiento total**: una sede nunca ve los registros
+de otra.
+
+- `src/data/sedes.js` es el catalogo (`SEDES`, `DEFAULT_SEDE_ID`). Los `id`
+  viajan a Supabase y a `localStorage`; **no cambiarlos** si ya hay registros.
+- Cada usuario pertenece a una sola sede, declarada en `src/lib/auth.js`. En los
+  componentes la sede se deriva con `getUserSede(currentUser)`, no se pasa como
+  prop desde `App.jsx`.
+- El aislamiento real lo hace RLS, no la UI: `supabase/multisede.sql` crea
+  `public.checklist_users` (usuario -> sede) y `public.current_sede()`, y las
+  policies de las 8 tablas comparan `sede = public.current_sede()`. La lista de
+  `auth.js` y esa tabla **tienen que coincidir**.
+- Un usuario sin fila en `checklist_users` no ve ni guarda nada.
+- Los planos de finca son por sede: ver `src/data/farmPlans.js`.
+
 ### Configuracion de las listas: `src/data/`
 
 - `checklistConfig.js`: secciones, items y **pesos** de aspersion.
 - `rbMonitoringConfig.js`, `directMonitoringConfig.js`: idem para esos modulos.
-- `farmPlan.js` (~7.400 lineas): plano de bloques/naves/camas. Lo usan monitoreo
-  directo y TSWV. **Archivo de datos sensible: no regenerarlo completo.** Hacer
-  solo ediciones puntuales cuando el usuario indique una correccion concreta.
+- `farmPlan.js` (~7.400 lineas): plano de bloques/naves/camas de la sede por
+  defecto. **Archivo de datos sensible: no regenerarlo completo.** Hacer solo
+  ediciones puntuales cuando el usuario indique una correccion concreta.
+- `farmPlans.js`: registro de planos por sede. Es lo que consumen monitoreo
+  directo y TSWV (`getFarmBlocks(sede)`, `getFarmNaves(sede, block)`,
+  `getFarmBeds(sede, block, nave)`, `hasFarmPlan(sede)`). Para agregar el plano
+  de una sede nueva se genera `farmPlanSedeN.js` desde su Excel y se registra
+  ahi; mientras no exista, esos dos modulos muestran un aviso.
 
 Los modulos mas nuevos llevan su configuracion inline en el propio `.jsx`.
 
@@ -127,6 +156,10 @@ implementacion propia de deflate/CRC32. No hay libreria de Excel. Cambiar este
 archivo es delicado; preferir extender las funciones `download*RecordsExcel`
 existentes en vez de tocar la maquinaria del ZIP.
 
+Las funciones `download*RecordsExcel(sede, records)` reciben la sede y la usan
+como prefijo del nombre del archivo. El contenido no la repite: con aislamiento
+por sede, todas las filas del archivo son de una sola.
+
 Aqui tambien vive el calculo de codigo de semana (`getCurrentWeekCode` y
 variantes por tipo de registro), en formato `AASS` (ano corto + semana ISO).
 
@@ -138,8 +171,12 @@ Agrupaciones ya acordadas con el usuario en las hojas generadas:
 
 ### Autenticacion y roles: `src/lib/auth.js`
 
-Tres usuarios fijos con email quemado en el codigo, autenticados contra Supabase
-Auth. Las contrasenas se configuran en Supabase y **nunca van al repositorio**.
+Nueve usuarios fijos con email quemado en el codigo (3 roles x 3 sedes),
+autenticados contra Supabase Auth. Las contrasenas se configuran en Supabase y
+**nunca van al repositorio**.
+
+Rol y sede son dimensiones independientes: el rol da permisos
+(`getPermissions`), la sede acota los datos (`getUserSede`).
 
 | Rol | Crear | Editar | Excel | Eliminar |
 | --- | --- | --- | --- | --- |
@@ -171,8 +208,10 @@ de almacenamiento (470 MB globales, minimo 100 registros por tabla).
 
 1. `src/NombreApp.jsx` — componente raiz con vistas `checklist` y `records`.
 2. `src/lib/nombreRecords.js` — copiar uno existente, cambiar clave local, tabla
-   y mapeos.
-3. `supabase/nombre.sql` — tabla + RLS + policies.
+   y mapeos. La sede va como primer parametro en las 5 funciones exportadas.
+3. `supabase/nombre.sql` — tabla + RLS + policies. Incluir la columna
+   `sede text not null`, el indice `(sede, created_at desc)` y policies con
+   `sede = public.current_sede()`, como en `supabase/multisede.sql`.
 4. `downloadNombreRecordsExcel` en `src/lib/excelExport.js`.
 5. Registrar el modulo en el selector y el switch de `src/App.jsx`.
 6. Estilos: reutilizar clases de `src/styles.css`.
