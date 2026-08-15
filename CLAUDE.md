@@ -176,7 +176,9 @@ Agrupaciones ya acordadas con el usuario en las hojas generadas:
 
 Doce usuarios fijos con email quemado en el codigo (3 roles x 4 sedes),
 autenticados contra Supabase Auth. Las contrasenas se configuran en Supabase y
-**nunca van al repositorio**.
+**nunca van al repositorio**: `supabase/crear-usuarios.sql` crea los usuarios
+en `auth.users` pero trae contrasenas de ejemplo que el usuario reemplaza al
+momento de ejecutarlo.
 
 Rol y sede son dimensiones independientes: el rol da permisos
 (`getPermissions`), la sede acota los datos (`getUserSede`).

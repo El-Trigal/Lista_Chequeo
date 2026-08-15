@@ -78,7 +78,9 @@ en `Authentication > Users` (los emails deben coincidir exactamente con
 
 OL es la sede que ya venia operando: conserva sus 3 usuarios originales y todos
 los registros existentes quedan asignados a ella. Los 9 usuarios de MT, FE y TR
-son nuevos y hay que crearlos.
+son nuevos y hay que crearlos, ya sea a mano en esa pantalla o pegando
+[`supabase/crear-usuarios.sql`](supabase/crear-usuarios.sql) en el SQL Editor
+(hay que editar las contraseñas del script antes de ejecutarlo).
 
 Las contraseñas no se guardan en el repositorio; deben configurarse en Supabase.
 
@@ -87,8 +89,14 @@ Las contraseñas no se guardan en el repositorio; deben configurarse en Supabase
 El codigo de multisede ya esta en la rama (ver `CLAUDE.md`, seccion
 "Multisede"), pero para que funcione en producción falta, en este orden:
 
-1. **Crear en Supabase los 9 usuarios nuevos** (MT, FE y TR) listados arriba,
-   en `Authentication > Users`.
+1. **Crear en Supabase los 9 usuarios nuevos** (MT, FE y TR) listados arriba.
+   Lo mas rapido es pegar
+   [`supabase/crear-usuarios.sql`](supabase/crear-usuarios.sql) en el SQL
+   Editor: crea los 9 de una vez, con el correo ya confirmado, y se salta los
+   que ya existan. **Antes de ejecutarlo hay que reemplazar las contraseñas de
+   ejemplo** que trae el script, y no dejarlas escritas en el repositorio
+   despues. La alternativa es crearlos uno por uno en
+   `Authentication > Users`.
 2. **Pegar [`supabase/multisede.sql`](supabase/multisede.sql) en el SQL
    Editor de Supabase.** Agrega la columna `sede` a las 8 tablas, la tabla
    `checklist_users` (usuario → sede) con los 12 usuarios, la función
