@@ -1,6 +1,10 @@
 # MVP Listas de Chequeo
 
-Aplicación React + Vite para digitalizar listas de chequeo de aspersión de plaguicidas y aseguramiento de monitoreo de roya blanca.
+Aplicación React + Vite para digitalizar las listas de chequeo operativas de
+finca: aspersión de plaguicidas, monitoreos fitosanitarios (roya blanca,
+monitoreo directo, TSWV, bancos de enraizamiento), labores de aspirado y
+soplado, y cuarto frío. Funciona offline-first (`localStorage` primero,
+Supabase después) y opera 4 sedes con aislamiento total entre ellas.
 
 ## Stack
 
@@ -33,15 +37,37 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 ```
 
-Ejecuta el SQL de [supabase/schema.sql](supabase/schema.sql) en el SQL Editor de Supabase. Crea estas tablas:
+Ningun `.sql` de `supabase/` se ejecuta con el push: se pegan a mano en el SQL
+Editor de Supabase. Para montar el proyecto desde cero, en este orden:
 
-- `spray_checklist_records`
-- `rb_monitoring_records`
+| Archivo | Que hace |
+| --- | --- |
+| [`schema.sql`](supabase/schema.sql) | Tablas de aspersion, roya blanca y monitoreo directo |
+| [`tswv-and-aspirado-checklist-records.sql`](supabase/tswv-and-aspirado-checklist-records.sql) | Tablas de TSWV y aspirado |
+| [`soplado-checklist-records.sql`](supabase/soplado-checklist-records.sql) | Tabla de soplado |
+| [`rb-rooting-records.sql`](supabase/rb-rooting-records.sql) | Tabla de bancos de enraizamiento |
+| [`cold-room-monitoring-records.sql`](supabase/cold-room-monitoring-records.sql) | Tabla de cuarto frio |
+| [`auth-policies-and-retention.sql`](supabase/auth-policies-and-retention.sql) | RLS para usuarios de Supabase Auth + limpieza por limite de almacenamiento |
+| [`delete-record-policies.sql`](supabase/delete-record-policies.sql) | Policies de borrado |
+| [`crear-usuarios.sql`](supabase/crear-usuarios.sql) | Crea los usuarios en `auth.users` |
+| [`multisede.sql`](supabase/multisede.sql) | Columna `sede`, `checklist_users`, `current_sede()` y policies por sede |
 
-Para un proyecto ya creado, ejecuta tambien [supabase/auth-policies-and-retention.sql](supabase/auth-policies-and-retention.sql). Ese script:
+Las 8 tablas de registros son:
 
-- Corrige las politicas RLS para que los usuarios de Supabase Auth puedan leer, guardar y editar registros.
-- Activa una limpieza automatica que borra los registros mas antiguos cuando el total combinado de las dos tablas se acerca al limite configurado.
+| Modulo | Tabla |
+| --- | --- |
+| Aspersion de plaguicidas | `spray_checklist_records` |
+| Monitoreo roya blanca | `rb_monitoring_records` |
+| Monitoreo directo | `direct_monitoring_records` |
+| TSWV | `tswv_checklist_records` |
+| Aspirado | `aspirado_checklist_records` |
+| Soplado | `soplado_checklist_records` |
+| RB bancos de enraizamiento | `rb_rooting_records` |
+| Cuarto frio | `cold_room_monitoring_records` |
+
+`auth-policies-and-retention.sql` ademas:
+
+- Activa una limpieza automatica que borra los registros mas antiguos cuando el total combinado de las tablas se acerca al limite configurado.
 - Deja un limite inicial global de 470 MB para registros de listas y conserva minimo 100 registros por cada tabla.
 
 El plan gratuito Nano de Supabase recomienda hasta 500 MB de base de datos. El limite global de 470 MB para registros de listas deja un margen pequeno para Auth, indices, metadatos y crecimiento interno de Postgres. La limpieza se basa en el tamano logico de los registros vivos; el tamano fisico de una tabla puede no bajar inmediatamente despues de borrar datos, pero ese espacio queda disponible para reutilizarse.
@@ -56,10 +82,9 @@ Para cambiar el limite, ajusta `max_total_live_bytes` en `public.checklist_stora
 
 ### Usuarios
 
-La app usa Supabase Auth. La app opera 4 sedes (OL, MT, FE y TR) con
-aislamiento total; cada usuario pertenece a una sola sede. Crea estos usuarios
-en `Authentication > Users` (los emails deben coincidir exactamente con
-`src/lib/auth.js`):
+La app usa Supabase Auth y opera 4 sedes (OL, MT, FE y TR) con aislamiento
+total; cada usuario pertenece a una sola sede. Los 12 usuarios ya estan creados
+en Supabase. Los emails deben coincidir exactamente con `src/lib/auth.js`:
 
 | Email | Rol visual | Sede |
 | --- | --- | --- |
@@ -77,43 +102,52 @@ en `Authentication > Users` (los emails deben coincidir exactamente con
 | `auxiliartr@trigal.com` | `auxiliar` | TR |
 
 OL es la sede que ya venia operando: conserva sus 3 usuarios originales y todos
-los registros existentes quedan asignados a ella. Los 9 usuarios de MT, FE y TR
-son nuevos y hay que crearlos, ya sea a mano en esa pantalla o pegando
-[`supabase/crear-usuarios.sql`](supabase/crear-usuarios.sql) en el SQL Editor
-(hay que editar las contraseñas del script antes de ejecutarlo).
+los registros anteriores a multisede quedaron asignados a ella. Los 9 de MT, FE
+y TR se crearon con
+[`supabase/crear-usuarios.sql`](supabase/crear-usuarios.sql), que inserta en
+`auth.users` y `auth.identities` con el correo ya confirmado y se salta los
+emails que ya existan. Ese mismo script sirve para agregar un usuario nuevo mas
+adelante: se edita la lista de `values`, se ejecuta, y al final trae un bloque
+comentado para cambiar contraseñas.
 
-Las contraseñas no se guardan en el repositorio; deben configurarse en Supabase.
+Las contraseñas no se guardan en el repositorio; se configuran en Supabase. Las
+que trae el script son de ejemplo y hay que reemplazarlas antes de ejecutarlo
+(y no dejarlas escritas en el archivo despues).
 
-## Multisede — pendientes de activación
+## Multisede
 
-El codigo de multisede ya esta en la rama (ver `CLAUDE.md`, seccion
-"Multisede"), pero para que funcione en producción falta, en este orden:
+El aislamiento por sede esta **activo en produccion** desde el 15 de agosto de
+2026. Lo que hay montado, para referencia:
 
-1. **Crear en Supabase los 9 usuarios nuevos** (MT, FE y TR) listados arriba.
-   Lo mas rapido es pegar
-   [`supabase/crear-usuarios.sql`](supabase/crear-usuarios.sql) en el SQL
-   Editor: crea los 9 de una vez, con el correo ya confirmado, y se salta los
-   que ya existan. **Antes de ejecutarlo hay que reemplazar las contraseñas de
-   ejemplo** que trae el script, y no dejarlas escritas en el repositorio
-   despues. La alternativa es crearlos uno por uno en
-   `Authentication > Users`.
-2. **Pegar [`supabase/multisede.sql`](supabase/multisede.sql) en el SQL
-   Editor de Supabase.** Agrega la columna `sede` a las 8 tablas, la tabla
-   `checklist_users` (usuario → sede) con los 12 usuarios, la función
-   `current_sede()` y reescribe las policies para que cada sede solo vea sus
-   propios registros. Los registros que ya existen quedan asignados a OL. Es idempotente, se puede volver a ejecutar sin romper
-   nada. El archivo trae al final las consultas para verificar que quedó bien.
-3. **Cargar los planos de bloques/naves/camas de MT, FE y TR.** Se necesita el
-   Excel del plano de cada sede (mismo formato que el que ya se uso para
-   `src/data/farmPlan.js`, que es el de OL). Con eso se generan
-   `src/data/farmPlanMt.js`, `farmPlanFe.js` y `farmPlanTr.js` y se registran
-   en `src/data/farmPlans.js`. Mientras no esten cargados, monitoreo directo y
-   TSWV muestran un aviso en vez de selectores de cama para esas sedes.
+- Los 12 usuarios existen en Supabase Auth, cada uno con su fila en
+  `public.checklist_users` (usuario → sede).
+- Las 8 tablas de registros tienen columna `sede`, indice `(sede, created_at
+  desc)` y policies RLS que comparan `sede = public.current_sede()`.
+- Los 150 registros que existian antes de multisede quedaron asignados a OL.
+- Quien aisla los datos es RLS, no la interfaz: un usuario sin fila en
+  `checklist_users` no ve ni guarda nada.
 
-Sin el paso 2, el aislamiento entre sedes **no existe todavía**: las policies
-de Supabase siguen siendo `using (true)`, es decir cualquier usuario
-autenticado ve los registros de todas las sedes. La app funciona igual, pero
-sin la separación real hasta que ese SQL se ejecute.
+Los dos scripts que dejaron esto montado son idempotentes y se pueden volver a
+ejecutar sin romper nada:
+[`supabase/crear-usuarios.sql`](supabase/crear-usuarios.sql) (usuarios) y
+[`supabase/multisede.sql`](supabase/multisede.sql) (columna, funcion y
+policies). El segundo trae al final las consultas de verificacion.
+
+Al agregar una sede nueva hay que tocar, en este orden: `src/data/sedes.js`,
+`src/lib/auth.js`, la lista de `values` de los dos `.sql`, y el plano en
+`src/data/farmPlans.js`.
+
+## Pendientes
+
+**Planos de bloques/naves/camas de MT, FE y TR.** Es lo unico que falta. Se
+necesita el Excel del plano de cada sede, con el mismo formato que el que ya se
+uso para `src/data/farmPlan.js` (que es el de OL). Con eso se generan
+`src/data/farmPlanMt.js`, `farmPlanFe.js` y `farmPlanTr.js` y se registran en
+`src/data/farmPlans.js`.
+
+Mientras no esten cargados, esas tres sedes funcionan en todos los modulos
+menos **monitoreo directo** y **TSWV**, que necesitan el plano para los
+selectores de cama y muestran un aviso en su lugar. OL no se ve afectada.
 
 ## GitHub Pages
 

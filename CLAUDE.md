@@ -109,6 +109,8 @@ la primera lectura de la sede por defecto los migra a la clave nueva.
 La app opera 4 sedes (`ol`, `mt`, `fe`, `tr`) con **aislamiento total**: una
 sede nunca ve los registros de otra. `ol` es la que ya venia operando: es
 `DEFAULT_SEDE_ID` y a ella pertenecen los registros anteriores a multisede.
+Esta activo en produccion desde el 15/08/2026: los 12 usuarios existen, las 8
+tablas tienen columna `sede` y las policies por sede estan aplicadas.
 
 - `src/data/sedes.js` es el catalogo (`SEDES`, `DEFAULT_SEDE_ID`). Los `id`
   viajan a Supabase y a `localStorage`; **no cambiarlos** si ya hay registros.
@@ -121,20 +123,29 @@ sede nunca ve los registros de otra. `ol` es la que ya venia operando: es
   policies de las 8 tablas comparan `sede = public.current_sede()`. La lista de
   `auth.js` y esa tabla **tienen que coincidir**.
 - Un usuario sin fila en `checklist_users` no ve ni guarda nada.
-- Los planos de finca son por sede: ver `src/data/farmPlans.js`.
+- Los usuarios se crean con `supabase/crear-usuarios.sql`, que inserta en
+  `auth.users` **y** en `auth.identities` (sin la identidad el login con
+  email/contrasena falla) y deja el correo confirmado. Es idempotente: se salta
+  los emails que ya existan.
+- Los planos de finca son por sede: ver `src/data/farmPlans.js`. Solo `ol`
+  tiene plano cargado; `mt`, `fe` y `tr` estan pendientes del Excel de cada
+  una.
+- Al agregar una sede se tocan, en orden: `src/data/sedes.js`,
+  `src/lib/auth.js`, la lista de `values` de los dos `.sql`, y
+  `src/data/farmPlans.js`.
 
 ### Configuracion de las listas: `src/data/`
 
 - `checklistConfig.js`: secciones, items y **pesos** de aspersion.
 - `rbMonitoringConfig.js`, `directMonitoringConfig.js`: idem para esos modulos.
-- `farmPlan.js` (~7.400 lineas): plano de bloques/naves/camas de la sede por
-  defecto. **Archivo de datos sensible: no regenerarlo completo.** Hacer solo
+- `farmPlan.js` (~7.400 lineas): plano de bloques/naves/camas de `ol`. **Archivo de datos sensible: no regenerarlo completo.** Hacer solo
   ediciones puntuales cuando el usuario indique una correccion concreta.
 - `farmPlans.js`: registro de planos por sede. Es lo que consumen monitoreo
   directo y TSWV (`getFarmBlocks(sede)`, `getFarmNaves(sede, block)`,
   `getFarmBeds(sede, block, nave)`, `hasFarmPlan(sede)`). Para agregar el plano
-  de una sede nueva se genera `farmPlanSedeN.js` desde su Excel y se registra
-  ahi; mientras no exista, esos dos modulos muestran un aviso.
+  de una sede nueva se genera `farmPlanMt.js` / `farmPlanFe.js` /
+  `farmPlanTr.js` desde su Excel y se registra ahi; mientras no exista, esos
+  dos modulos muestran un aviso para esa sede.
 
 Los modulos mas nuevos llevan su configuracion inline en el propio `.jsx`.
 

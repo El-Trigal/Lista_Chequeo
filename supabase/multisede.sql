@@ -3,9 +3,14 @@
 -- Pegar completo en el SQL Editor de Supabase. Es idempotente: se puede volver
 -- a ejecutar sin romper nada.
 --
+-- ESTADO: ejecutado en el proyecto de produccion el 15/08/2026. Volver a
+-- correrlo es seguro (es idempotente) y es lo que hay que hacer al agregar una
+-- sede o un usuario nuevo a la lista de asignacion.
+--
 -- ANTES DE EJECUTAR:
---   1. Crear en Authentication > Users los usuarios de las sedes nuevas, con
---      los mismos emails que estan en src/lib/auth.js.
+--   1. Crear los usuarios de las sedes nuevas, con los mismos emails que estan
+--      en src/lib/auth.js: con supabase/crear-usuarios.sql o a mano en
+--      Authentication > Users.
 --   2. Revisar el bloque "asignacion de usuarios" mas abajo: los emails y los
 --      ids de sede deben coincidir exactamente con src/lib/auth.js.
 --

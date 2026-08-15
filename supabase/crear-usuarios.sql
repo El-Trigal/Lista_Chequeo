@@ -1,16 +1,20 @@
--- Crea los usuarios de las sedes nuevas (MT, FE, TR) sin pasar por la interfaz
--- de Authentication > Users.
+-- Crea usuarios de la app en Supabase Auth sin pasar por la interfaz de
+-- Authentication > Users.
 --
--- ORDEN DE EJECUCION:
---   1. Este archivo (crea los 9 usuarios).
+-- ESTADO: ejecutado el 15/08/2026; los 12 usuarios ya existen. El archivo se
+-- conserva para agregar usuarios nuevos: se edita la lista de `values` de mas
+-- abajo y se vuelve a ejecutar (los emails que ya existan se saltan).
+--
+-- ORDEN DE EJECUCION (en un proyecto desde cero):
+--   1. Este archivo (crea los usuarios).
 --   2. supabase/multisede.sql (columna sede, RLS y policies por sede).
 --
 -- Si `public.checklist_users` ya existe, este script tambien deja asignada la
 -- sede de cada usuario que crea; si no existe todavia, la asignacion la hace
 -- multisede.sql en el paso 2. Cualquiera de los dos ordenes termina igual.
 --
--- ES IDEMPOTENTE: un email que ya exista en auth.users se salta sin tocarlo.
--- Los 3 usuarios de OL, que ya estan creados, no se ven afectados.
+-- ES IDEMPOTENTE: un email que ya exista en auth.users se salta sin tocarlo,
+-- incluida su contrasena.
 --
 -- ---------------------------------------------------------------------------
 -- ANTES DE EJECUTAR: CAMBIAR LAS CONTRASEÑAS
