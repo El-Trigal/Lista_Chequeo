@@ -1,5 +1,5 @@
 import { hasSupabaseConfig, supabase } from "./supabase";
-import { DEFAULT_SEDE_ID } from "../data/sedes";
+import { DEFAULT_SEDE_ID, LEGACY_SEDE_ID } from "../data/sedes";
 
 const LOCAL_STORAGE_KEY = "direct-monitoring-checklist-records";
 const TABLE_NAME = "direct_monitoring_records";
@@ -30,8 +30,9 @@ function getStorageKey(sede) {
   return `${LOCAL_STORAGE_KEY}::${sede}`;
 }
 
-// Los registros guardados antes de multisede vivian en la clave sin sufijo.
-// La primera vez que la sede por defecto lee su clave nueva, se migran.
+// Los registros guardados antes de multisede vivian en la clave sin sufijo, y
+// los de la primera version de multisede en la clave `::sede1`. La primera vez
+// que la sede por defecto lee su clave nueva, se migran desde donde esten.
 function readStoredValue(sede) {
   const stored = localStorage.getItem(getStorageKey(sede));
 
@@ -39,14 +40,17 @@ function readStoredValue(sede) {
     return stored;
   }
 
-  const legacyStored = localStorage.getItem(LOCAL_STORAGE_KEY);
+  const legacyKeys = [`${LOCAL_STORAGE_KEY}::${LEGACY_SEDE_ID}`, LOCAL_STORAGE_KEY];
+  const legacyKey = legacyKeys.find((key) => localStorage.getItem(key) !== null);
 
-  if (legacyStored === null) {
+  if (!legacyKey) {
     return null;
   }
 
+  const legacyStored = localStorage.getItem(legacyKey);
+
   localStorage.setItem(getStorageKey(sede), legacyStored);
-  localStorage.removeItem(LOCAL_STORAGE_KEY);
+  localStorage.removeItem(legacyKey);
   return legacyStored;
 }
 

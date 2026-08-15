@@ -9,8 +9,12 @@
 --   2. Revisar el bloque "asignacion de usuarios" mas abajo: los emails y los
 --      ids de sede deben coincidir exactamente con src/lib/auth.js.
 --
--- Los registros que ya existen quedan asignados a 'sede1' por el default de la
--- columna.
+-- Los registros que ya existen quedan asignados a 'ol' (la sede que venia
+-- operando) por el default de la columna.
+--
+-- Las sedes son 4: ol, mt, fe, tr. Si una version anterior de este script ya
+-- se ejecuto con los ids viejos ('sede1'), los pasos 3 y 4 renombran 'sede1' a
+-- 'ol'; 'sede2' y 'sede3' no llegaron a usarse.
 
 -- ---------------------------------------------------------------------------
 -- 1. Mapa usuario -> sede
@@ -40,15 +44,18 @@ grant select on public.checklist_users to authenticated;
 insert into public.checklist_users (user_id, sede)
 select u.id, v.sede
 from (values
-  ('jefemipe@trigal.com',      'sede1'),
-  ('operariomipe@trigal.com',  'sede1'),
-  ('auxiliarpro@trigal.com',   'sede1'),
-  ('jefesede2@trigal.com',     'sede2'),
-  ('operariosede2@trigal.com', 'sede2'),
-  ('auxiliarsede2@trigal.com', 'sede2'),
-  ('jefesede3@trigal.com',     'sede3'),
-  ('operariosede3@trigal.com', 'sede3'),
-  ('auxiliarsede3@trigal.com', 'sede3')
+  ('jefemipe@trigal.com',     'ol'),
+  ('operariomipe@trigal.com', 'ol'),
+  ('auxiliarpro@trigal.com',  'ol'),
+  ('jefemt@trigal.com',       'mt'),
+  ('operariomt@trigal.com',   'mt'),
+  ('auxiliarmt@trigal.com',   'mt'),
+  ('jefefe@trigal.com',       'fe'),
+  ('operariofe@trigal.com',   'fe'),
+  ('auxiliarfe@trigal.com',   'fe'),
+  ('jefetr@trigal.com',       'tr'),
+  ('operariotr@trigal.com',   'tr'),
+  ('auxiliartr@trigal.com',   'tr')
 ) as v (email, sede)
 join auth.users u on lower(u.email) = v.email
 on conflict (user_id) do update set sede = excluded.sede;
@@ -93,10 +100,22 @@ declare
   ];
 begin
   foreach target_table in array checklist_tables loop
-    -- Los registros existentes quedan en sede1 por el default.
+    -- Los registros existentes quedan en 'ol' por el default.
     execute format(
       'alter table public.%I add column if not exists sede text not null default %L',
-      target_table, 'sede1'
+      target_table, 'ol'
+    );
+
+    -- Si la columna ya existia con el id viejo, se corrige el default y se
+    -- renombra la sede de los registros que quedaron marcados como 'sede1'.
+    execute format(
+      'alter table public.%I alter column sede set default %L',
+      target_table, 'ol'
+    );
+
+    execute format(
+      'update public.%I set sede = %L where sede = %L',
+      target_table, 'ol', 'sede1'
     );
 
     -- La app consulta siempre por sede ordenando por fecha.
@@ -162,7 +181,7 @@ $$;
 -- ---------------------------------------------------------------------------
 -- 5. Verificacion
 -- ---------------------------------------------------------------------------
--- Asignacion de usuarios (deben aparecer las 9 filas si ya se crearon todos):
+-- Asignacion de usuarios (deben aparecer las 12 filas si ya se crearon todos):
 --   select u.email, c.sede
 --   from public.checklist_users c
 --   join auth.users u on u.id = c.user_id
