@@ -1,10 +1,10 @@
 // Planos de finca por sede.
 //
-// `farmPlan.js` es el plano de la sede 1 y NO se toca: es un archivo generado
-// desde Excel, sensible, que no debe regenerarse completo (ver CLAUDE.md).
+// `farmPlan.js` es el plano de OL y NO se toca: es un archivo generado desde
+// Excel, sensible, que no debe regenerarse completo (ver CLAUDE.md).
 //
-// Para agregar el plano de una sede nueva:
-//   1. Generar `src/data/farmPlanSede2.js` desde el Excel de esa sede, con la
+// Para agregar el plano de una sede nueva (MT, FE, TR):
+//   1. Generar `src/data/farmPlanMt.js` desde el Excel de esa sede, con la
 //      misma forma que `farmPlan.js`: { bloque: { nave: [camas] } }.
 //   2. Importarlo aqui y registrarlo en `FARM_PLANS` bajo el id de la sede.
 //

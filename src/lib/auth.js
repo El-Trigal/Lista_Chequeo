@@ -6,8 +6,9 @@ import { DEFAULT_SEDE_ID, isValidSede } from "../data/sedes";
 // `public.checklist_users` de `supabase/multisede.sql`: el frontend usa esta
 // lista, pero quien realmente aisla los datos es RLS con esa tabla.
 //
-// Los usuarios de la sede 1 son los que ya existian; los de sede2 y sede3 hay
-// que crearlos en Supabase (Authentication > Users) con estos mismos emails.
+// Los usuarios de OL son los que ya existian y conservan sus emails; los de
+// MT, FE y TR hay que crearlos en Supabase (Authentication > Users) con estos
+// mismos emails.
 const USER_PROFILES = [
   {
     username: "jefe",
@@ -31,46 +32,67 @@ const USER_PROFILES = [
     sede: DEFAULT_SEDE_ID
   },
   {
-    username: "jefe2",
-    email: "jefesede2@trigal.com",
+    username: "jefemt",
+    email: "jefemt@trigal.com",
     role: "jefe",
     label: "jefe",
-    sede: "sede2"
+    sede: "mt"
   },
   {
-    username: "operario2",
-    email: "operariosede2@trigal.com",
+    username: "operariomt",
+    email: "operariomt@trigal.com",
     role: "operario",
     label: "operario",
-    sede: "sede2"
+    sede: "mt"
   },
   {
-    username: "auxiliar2",
-    email: "auxiliarsede2@trigal.com",
+    username: "auxiliarmt",
+    email: "auxiliarmt@trigal.com",
     role: "auxiliar",
     label: "auxiliar",
-    sede: "sede2"
+    sede: "mt"
   },
   {
-    username: "jefe3",
-    email: "jefesede3@trigal.com",
+    username: "jefefe",
+    email: "jefefe@trigal.com",
     role: "jefe",
     label: "jefe",
-    sede: "sede3"
+    sede: "fe"
   },
   {
-    username: "operario3",
-    email: "operariosede3@trigal.com",
+    username: "operariofe",
+    email: "operariofe@trigal.com",
     role: "operario",
     label: "operario",
-    sede: "sede3"
+    sede: "fe"
   },
   {
-    username: "auxiliar3",
-    email: "auxiliarsede3@trigal.com",
+    username: "auxiliarfe",
+    email: "auxiliarfe@trigal.com",
     role: "auxiliar",
     label: "auxiliar",
-    sede: "sede3"
+    sede: "fe"
+  },
+  {
+    username: "jefetr",
+    email: "jefetr@trigal.com",
+    role: "jefe",
+    label: "jefe",
+    sede: "tr"
+  },
+  {
+    username: "operariotr",
+    email: "operariotr@trigal.com",
+    role: "operario",
+    label: "operario",
+    sede: "tr"
+  },
+  {
+    username: "auxiliartr",
+    email: "auxiliartr@trigal.com",
+    role: "auxiliar",
+    label: "auxiliar",
+    sede: "tr"
   }
 ];
 

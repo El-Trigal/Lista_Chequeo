@@ -84,7 +84,7 @@ Contrato de comportamiento que hay que preservar:
    sufijo `::<sede>` y las consultas remotas filtran por `.eq("sede", sede)`.
 
 Mapa de claves locales a tablas (la clave real lleva sufijo `::<sede>`,
-p. ej. `spray-checklist-records::sede1`):
+p. ej. `spray-checklist-records::ol`):
 
 | localStorage | tabla Supabase |
 | --- | --- |
@@ -100,17 +100,20 @@ p. ej. `spray-checklist-records::sede1`):
 `src/lib/records.js` filtra ademas por `RECORDS_RESET_AT`: los registros
 anteriores a esa fecha se descartan al leer. No cambiar sin pedirlo el usuario.
 
-Los registros guardados antes de multisede vivian en la clave sin sufijo; la
-primera lectura de la sede por defecto los migra a la clave nueva.
+Los registros guardados antes de multisede vivian en la clave sin sufijo, y los
+de la primera version de multisede en `::sede1` (id que se reemplazo por `ol`);
+la primera lectura de la sede por defecto los migra a la clave nueva.
 
 ### Multisede
 
-La app opera 3 sedes con **aislamiento total**: una sede nunca ve los registros
-de otra.
+La app opera 4 sedes (`ol`, `mt`, `fe`, `tr`) con **aislamiento total**: una
+sede nunca ve los registros de otra. `ol` es la que ya venia operando: es
+`DEFAULT_SEDE_ID` y a ella pertenecen los registros anteriores a multisede.
 
 - `src/data/sedes.js` es el catalogo (`SEDES`, `DEFAULT_SEDE_ID`). Los `id`
   viajan a Supabase y a `localStorage`; **no cambiarlos** si ya hay registros.
-- Cada usuario pertenece a una sola sede, declarada en `src/lib/auth.js`. En los
+- Cada usuario pertenece a una sola sede, declarada en `src/lib/auth.js` (12
+  usuarios: 3 roles x 4 sedes). En los
   componentes la sede se deriva con `getUserSede(currentUser)`, no se pasa como
   prop desde `App.jsx`.
 - El aislamiento real lo hace RLS, no la UI: `supabase/multisede.sql` crea
@@ -171,9 +174,11 @@ Agrupaciones ya acordadas con el usuario en las hojas generadas:
 
 ### Autenticacion y roles: `src/lib/auth.js`
 
-Nueve usuarios fijos con email quemado en el codigo (3 roles x 3 sedes),
+Doce usuarios fijos con email quemado en el codigo (3 roles x 4 sedes),
 autenticados contra Supabase Auth. Las contrasenas se configuran en Supabase y
-**nunca van al repositorio**.
+**nunca van al repositorio**: `supabase/crear-usuarios.sql` crea los usuarios
+en `auth.users` pero trae contrasenas de ejemplo que el usuario reemplaza al
+momento de ejecutarlo.
 
 Rol y sede son dimensiones independientes: el rol da permisos
 (`getPermissions`), la sede acota los datos (`getUserSede`).

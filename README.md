@@ -56,26 +56,31 @@ Para cambiar el limite, ajusta `max_total_live_bytes` en `public.checklist_stora
 
 ### Usuarios
 
-La app usa Supabase Auth. La app opera 3 sedes con aislamiento total; cada
-usuario pertenece a una sola sede. Crea estos usuarios en `Authentication >
-Users` (los emails deben coincidir exactamente con `src/lib/auth.js`):
+La app usa Supabase Auth. La app opera 4 sedes (OL, MT, FE y TR) con
+aislamiento total; cada usuario pertenece a una sola sede. Crea estos usuarios
+en `Authentication > Users` (los emails deben coincidir exactamente con
+`src/lib/auth.js`):
 
 | Email | Rol visual | Sede |
 | --- | --- | --- |
-| `jefemipe@trigal.com` | `jefe` | sede1 |
-| `operariomipe@trigal.com` | `operario` | sede1 |
-| `auxiliarpro@trigal.com` | `auxiliar` | sede1 |
-| `jefesede2@trigal.com` | `jefe` | sede2 |
-| `operariosede2@trigal.com` | `operario` | sede2 |
-| `auxiliarsede2@trigal.com` | `auxiliar` | sede2 |
-| `jefesede3@trigal.com` | `jefe` | sede3 |
-| `operariosede3@trigal.com` | `operario` | sede3 |
-| `auxiliarsede3@trigal.com` | `auxiliar` | sede3 |
+| `jefemipe@trigal.com` | `jefe` | OL |
+| `operariomipe@trigal.com` | `operario` | OL |
+| `auxiliarpro@trigal.com` | `auxiliar` | OL |
+| `jefemt@trigal.com` | `jefe` | MT |
+| `operariomt@trigal.com` | `operario` | MT |
+| `auxiliarmt@trigal.com` | `auxiliar` | MT |
+| `jefefe@trigal.com` | `jefe` | FE |
+| `operariofe@trigal.com` | `operario` | FE |
+| `auxiliarfe@trigal.com` | `auxiliar` | FE |
+| `jefetr@trigal.com` | `jefe` | TR |
+| `operariotr@trigal.com` | `operario` | TR |
+| `auxiliartr@trigal.com` | `auxiliar` | TR |
 
-Los usuarios de sede2 y sede3, y los nombres de sede (`Sede 1/2/3` en
-`src/data/sedes.js`), son placeholders. Si los nombres reales de las sedes o
-los emails van a ser distintos, avisar para actualizarlos ahi y en
-`supabase/multisede.sql`.
+OL es la sede que ya venia operando: conserva sus 3 usuarios originales y todos
+los registros existentes quedan asignados a ella. Los 9 usuarios de MT, FE y TR
+son nuevos y hay que crearlos, ya sea a mano en esa pantalla o pegando
+[`supabase/crear-usuarios.sql`](supabase/crear-usuarios.sql) en el SQL Editor
+(hay que editar las contraseñas del script antes de ejecutarlo).
 
 Las contraseñas no se guardan en el repositorio; deben configurarse en Supabase.
 
@@ -84,20 +89,26 @@ Las contraseñas no se guardan en el repositorio; deben configurarse en Supabase
 El codigo de multisede ya esta en la rama (ver `CLAUDE.md`, seccion
 "Multisede"), pero para que funcione en producción falta, en este orden:
 
-1. **Crear en Supabase los 6 usuarios nuevos** (sede2 y sede3) listados arriba,
-   en `Authentication > Users`.
+1. **Crear en Supabase los 9 usuarios nuevos** (MT, FE y TR) listados arriba.
+   Lo mas rapido es pegar
+   [`supabase/crear-usuarios.sql`](supabase/crear-usuarios.sql) en el SQL
+   Editor: crea los 9 de una vez, con el correo ya confirmado, y se salta los
+   que ya existan. **Antes de ejecutarlo hay que reemplazar las contraseñas de
+   ejemplo** que trae el script, y no dejarlas escritas en el repositorio
+   despues. La alternativa es crearlos uno por uno en
+   `Authentication > Users`.
 2. **Pegar [`supabase/multisede.sql`](supabase/multisede.sql) en el SQL
    Editor de Supabase.** Agrega la columna `sede` a las 8 tablas, la tabla
-   `checklist_users` (usuario → sede) con los 9 usuarios, la función
+   `checklist_users` (usuario → sede) con los 12 usuarios, la función
    `current_sede()` y reescribe las policies para que cada sede solo vea sus
-   propios registros. Es idempotente, se puede volver a ejecutar sin romper
+   propios registros. Los registros que ya existen quedan asignados a OL. Es idempotente, se puede volver a ejecutar sin romper
    nada. El archivo trae al final las consultas para verificar que quedó bien.
-3. **Cargar los planos de bloques/naves/camas de sede2 y sede3.** Se necesita
-   el Excel del plano de cada sede (mismo formato que el que ya se uso para
-   `src/data/farmPlan.js`). Con eso se genera `src/data/farmPlanSede2.js` /
-   `farmPlanSede3.js` y se registran en `src/data/farmPlans.js`. Mientras no
-   esten cargados, monitoreo directo y TSWV muestran un aviso en vez de
-   selectores de cama para esas sedes.
+3. **Cargar los planos de bloques/naves/camas de MT, FE y TR.** Se necesita el
+   Excel del plano de cada sede (mismo formato que el que ya se uso para
+   `src/data/farmPlan.js`, que es el de OL). Con eso se generan
+   `src/data/farmPlanMt.js`, `farmPlanFe.js` y `farmPlanTr.js` y se registran
+   en `src/data/farmPlans.js`. Mientras no esten cargados, monitoreo directo y
+   TSWV muestran un aviso en vez de selectores de cama para esas sedes.
 
 Sin el paso 2, el aislamiento entre sedes **no existe todavía**: las policies
 de Supabase siguen siendo `using (true)`, es decir cualquier usuario
