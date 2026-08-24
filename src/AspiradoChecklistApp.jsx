@@ -147,9 +147,9 @@ export default function AspiradoChecklistApp({ currentUser, permissions, onHome,
   const [editingRecord, setEditingRecord] = useState(null); 
   const result = useMemo(() => calculateAspiradoScore(form), [form]); 
   const answeredCount = (String(form.monitoredBeds).trim() ? 1 : 0) + (areItemsComplete(REQUIREMENTS, form.requirements) ? 1 : 0) + (areItemsComplete(QUALITY_ITEMS, form.quality) ? 1 : 0); 
-  async function refreshRecords() { setIsRecordsLoading(true); try { const loaded = await loadAspiradoRecords(sede); setRecords(loaded.records); setRecordsSource(loaded.sourceLabel); } finally { setIsRecordsLoading(false); } }
+  async function refreshRecords(background = false) { if (!background) setIsRecordsLoading(true); try { const loaded = await loadAspiradoRecords(sede); setRecords(loaded.records); setRecordsSource(loaded.sourceLabel); } finally { if (!background) setIsRecordsLoading(false); } }
   useEffect(() => { refreshRecords(); function handleConnectivityChange() { refreshRecords(); } window.addEventListener("online", handleConnectivityChange); return () => window.removeEventListener("online", handleConnectivityChange); }, []);
-  useEffect(() => { if (view === RECORDS_VIEW) { refreshRecords(); const intervalId = window.setInterval(refreshRecords, 15000); return () => window.clearInterval(intervalId); } return undefined; }, [view]);
+  useEffect(() => { if (view === RECORDS_VIEW) { refreshRecords(); const intervalId = window.setInterval(() => refreshRecords(true), 15000); return () => window.clearInterval(intervalId); } return undefined; }, [view]);
   function updateForm(patch) { setForm((current) => ({ ...current, ...patch })); }
   function updateRequirement(id, value) { setForm((current) => ({ ...current, requirements: { ...current.requirements, [id]: value } })); }
   function updateQuality(id, value) { setForm((current) => ({ ...current, quality: { ...current.quality, [id]: value } })); }

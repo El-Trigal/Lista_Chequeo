@@ -877,15 +877,15 @@ export default function DirectMonitoringApp({ currentUser, permissions, onHome, 
     ).length;
   const answerableCount = DIRECT_MONITORING_ITEMS.length;
 
-  async function refreshRecords() {
-    setIsRecordsLoading(true);
+  async function refreshRecords(background = false) {
+    if (!background) setIsRecordsLoading(true);
 
     try {
       const loaded = await loadDirectMonitoringRecords(sede);
       setRecords(loaded.records);
       setRecordsSource(loaded.sourceLabel);
     } finally {
-      setIsRecordsLoading(false);
+      if (!background) setIsRecordsLoading(false);
     }
   }
 
@@ -910,7 +910,7 @@ export default function DirectMonitoringApp({ currentUser, permissions, onHome, 
 
     window.addEventListener("online", handleSupabaseRefresh);
     window.addEventListener("focus", handleSupabaseRefresh);
-    const intervalId = window.setInterval(refreshRecords, 15000);
+    const intervalId = window.setInterval(() => refreshRecords(true), 15000);
 
     return () => {
       window.removeEventListener("online", handleSupabaseRefresh);

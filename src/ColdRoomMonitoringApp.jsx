@@ -739,14 +739,14 @@ export default function ColdRoomMonitoringApp({ currentUser, permissions, onHome
     (form.reportStatus ? 1 : 0) +
     (areQualityItemsComplete(form.qualityAnswers) ? 1 : 0);
 
-  async function refreshRecords() {
-    setIsRecordsLoading(true);
+  async function refreshRecords(background = false) {
+    if (!background) setIsRecordsLoading(true);
     try {
       const loaded = await loadColdRoomRecords(sede);
       setRecords(loaded.records.map(normalizeColdRoomRecord));
       setRecordsSource(loaded.sourceLabel);
     } finally {
-      setIsRecordsLoading(false);
+      if (!background) setIsRecordsLoading(false);
     }
   }
 
@@ -765,7 +765,7 @@ export default function ColdRoomMonitoringApp({ currentUser, permissions, onHome
   useEffect(() => {
     if (view === RECORDS_VIEW) {
       refreshRecords();
-      const intervalId = window.setInterval(refreshRecords, 15000);
+      const intervalId = window.setInterval(() => refreshRecords(true), 15000);
       return () => window.clearInterval(intervalId);
     }
     return undefined;

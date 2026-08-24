@@ -686,15 +686,15 @@ export default function TswvChecklistApp({ currentUser, permissions, onHome, onL
     (isControlsComplete(form.controls) ? 1 : 0) +
     (isErradicationsComplete(form.erradications) ? 1 : 0);
 
-  async function refreshRecords() {
-    setIsRecordsLoading(true);
+  async function refreshRecords(background = false) {
+    if (!background) setIsRecordsLoading(true);
 
     try {
       const loaded = await loadTswvRecords(sede);
       setRecords(loaded.records);
       setRecordsSource(loaded.sourceLabel);
     } finally {
-      setIsRecordsLoading(false);
+      if (!background) setIsRecordsLoading(false);
     }
   }
 
@@ -723,7 +723,7 @@ export default function TswvChecklistApp({ currentUser, permissions, onHome, onL
   useEffect(() => {
     if (view === RECORDS_VIEW) {
       refreshRecords();
-      const intervalId = window.setInterval(refreshRecords, 15000);
+      const intervalId = window.setInterval(() => refreshRecords(true), 15000);
 
       return () => {
         window.clearInterval(intervalId);

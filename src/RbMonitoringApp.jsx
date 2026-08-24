@@ -781,15 +781,15 @@ export default function RbMonitoringApp({ currentUser, permissions, onHome, onLo
     RB_MONITORING_ITEMS.filter((item) => form.controlAnswers[item.id]).length;
   const answerableCount = RB_MONITORING_ITEMS.length + 2;
 
-  async function refreshRecords() {
-    setIsRecordsLoading(true);
+  async function refreshRecords(background = false) {
+    if (!background) setIsRecordsLoading(true);
 
     try {
       const loaded = await loadRbMonitoringRecords(sede);
       setRecords(loaded.records.map(normalizeRbMonitoringRecord));
       setRecordsSource(loaded.sourceLabel);
     } finally {
-      setIsRecordsLoading(false);
+      if (!background) setIsRecordsLoading(false);
     }
   }
 
@@ -818,7 +818,7 @@ export default function RbMonitoringApp({ currentUser, permissions, onHome, onLo
   useEffect(() => {
     if (view === RECORDS_VIEW) {
       refreshRecords();
-      const intervalId = window.setInterval(refreshRecords, 15000);
+      const intervalId = window.setInterval(() => refreshRecords(true), 15000);
 
       return () => {
         window.clearInterval(intervalId);

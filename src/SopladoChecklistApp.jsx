@@ -368,14 +368,14 @@ export default function SopladoChecklistApp({ currentUser, permissions, onHome, 
   const result = useMemo(() => calculateSopladoScore(form), [form]);
   const answeredCount = (String(form.monitoredBeds).trim() ? 1 : 0) + (areItemsComplete(REQUIREMENTS, form.requirements) ? 1 : 0) + (areItemsComplete(QUALITY_ITEMS, form.quality) ? 1 : 0);
 
-  async function refreshRecords() {
-    setIsRecordsLoading(true);
+  async function refreshRecords(background = false) {
+    if (!background) setIsRecordsLoading(true);
     try {
       const loaded = await loadSopladoRecords(sede);
       setRecords(loaded.records);
       setRecordsSource(loaded.sourceLabel);
     } finally {
-      setIsRecordsLoading(false);
+      if (!background) setIsRecordsLoading(false);
     }
   }
 
@@ -394,7 +394,7 @@ export default function SopladoChecklistApp({ currentUser, permissions, onHome, 
   useEffect(() => {
     if (view === RECORDS_VIEW) {
       refreshRecords();
-      const intervalId = window.setInterval(refreshRecords, 15000);
+      const intervalId = window.setInterval(() => refreshRecords(true), 15000);
       return () => window.clearInterval(intervalId);
     }
     return undefined;
